@@ -1,0 +1,50 @@
+/* World Cup Overlay — injected widget styles.
+   Scoped under #wc-overlay-root and reset with `all: initial` so the host page's CSS
+   cannot bleed in and these rules cannot leak out. */
+
+#wc-overlay-root,
+#wc-overlay-root * {
+  all: initial;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}
+
+#wc-overlay-root {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483647; /* max — sit above page chrome */
+}
+
+#wc-overlay-root .wc-card {
+  display: block;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #0b7c3c;
+  color: #ffffff;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+}
+
+#wc-overlay-root .wc-head {
+  display: block;
+  margin-bottom: 6px;
+}
+
+#wc-overlay-root .wc-title {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+#wc-overlay-root .wc-body {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
