@@ -1,0 +1,19 @@
+# Build output
+dist/
+*.zip
+
+# Dependencies (if a plugin ever adds a build step)
+node_modules/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Local secrets (e.g. a personal TheSportsDB / API key override)
+**/secrets.local.js
+.env
+.env.local

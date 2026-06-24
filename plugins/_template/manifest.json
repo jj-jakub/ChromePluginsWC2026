@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Plugin Template",
+  "version": "0.1.0",
+  "description": "Starter Manifest V3 plugin. Copy this folder to begin a new plugin.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [],
+  "host_permissions": [],
+  "background": {
+    "service_worker": "src/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
