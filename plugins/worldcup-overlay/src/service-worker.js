@@ -1,39 +1,94 @@
 // World Cup Overlay — background service worker (MV3, module).
 //
-// Responsibilities (filled in over the next commits):
-//   - fetch World Cup data from TheSportsDB (host_permissions bypass page CORS)
-//   - compute a single "what to show" state (live / upcoming / result)
-//   - cache it and answer WC_GET_STATE messages from content scripts
-//
-// Scaffold stage: returns a static placeholder so the overlay shell renders end-to-end.
+// Fetches World Cup data from TheSportsDB, computes the single "what to show" state, caches it,
+// keeps it warm with a chrome.alarms timer, and answers WC_GET_STATE from content scripts.
+// Network runs here so host_permissions bypass page CORS.
 
-const WC = {
-  // Message types shared with the content script.
-  GET_STATE: "WC_GET_STATE",
-};
+import { fetchEvents } from "./api.js";
+import { classify } from "./wc-state.js";
 
-function placeholderState() {
-  return {
-    mode: "upcoming",
-    updatedAt: Date.now(),
-    match: {
-      league: "FIFA World Cup",
-      home: "Team A",
-      away: "Team B",
-      kickoff: null,
-      note: "Scaffold placeholder — live data wired up in a later commit.",
-    },
-  };
+const MSG_GET_STATE = "WC_GET_STATE";
+const CACHE_KEY = "wc_state_cache";
+const ALARM = "wc-refresh";
+
+// Serve cached state for this long before refetching. Short when a match is live so scores/
+// status move; longer otherwise to be gentle on the API.
+const TTL_LIVE_MS = 60 * 1000;
+const TTL_IDLE_MS = 5 * 60 * 1000;
+
+let inFlight = null; // de-dupe concurrent refreshes
+
+function ttlFor(state) {
+  return state && state.mode === "live" ? TTL_LIVE_MS : TTL_IDLE_MS;
+}
+
+async function readCache() {
+  const got = await chrome.storage.local.get(CACHE_KEY);
+  return got[CACHE_KEY] || null;
+}
+
+async function writeCache(entry) {
+  await chrome.storage.local.set({ [CACHE_KEY]: entry });
+}
+
+async function refresh() {
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    const now = Date.now();
+    const events = await fetchEvents(now);
+    const state = classify(events, now);
+    const entry = { state, fetchedAt: now };
+    await writeCache(entry);
+    return entry;
+  })();
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = null;
+  }
+}
+
+// Return fresh-enough cache, else refetch. On fetch failure, fall back to stale cache so the
+// overlay degrades gracefully instead of going blank.
+async function getState() {
+  const cached = await readCache();
+  const fresh =
+    cached && Date.now() - cached.fetchedAt < ttlFor(cached.state) ? cached : null;
+  if (fresh) return { ok: true, state: fresh.state, fetchedAt: fresh.fetchedAt };
+
+  try {
+    const entry = await refresh();
+    return { ok: true, state: entry.state, fetchedAt: entry.fetchedAt };
+  } catch (err) {
+    if (cached) {
+      return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, stale: true };
+    }
+    return { ok: false, error: String(err && err.message ? err.message : err) };
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg && msg.type === WC.GET_STATE) {
-    sendResponse({ ok: true, state: placeholderState() });
-    return true; // keep the channel open for the (sync, but future-async) response
+  if (msg && msg.type === MSG_GET_STATE) {
+    getState().then(sendResponse);
+    return true; // async response
   }
   return false;
 });
 
+function ensureAlarm() {
+  chrome.alarms.create(ALARM, { periodInMinutes: 2 });
+}
+
+chrome.alarms.onAlarm.addListener((a) => {
+  if (a.name === ALARM) refresh().catch((e) => console.warn("[worldcup-overlay] refresh", e));
+});
+
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[worldcup-overlay] installed");
+  ensureAlarm();
+  refresh().catch((e) => console.warn("[worldcup-overlay] initial refresh", e));
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  ensureAlarm();
+  refresh().catch(() => {});
 });
