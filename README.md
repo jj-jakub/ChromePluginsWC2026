@@ -1,45 +1,92 @@
 # ChromePluginsWC2026
 
-A monorepo of small, focused **Chrome extensions (Manifest V3)**. Each plugin lives in its
-own self-contained folder under [`plugins/`](plugins/) and can be loaded independently.
+A small monorepo of focused **Chrome extensions (Manifest V3)**. Each plugin lives in its own
+folder under [`plugins/`](plugins/) and loads independently — no build step, no dependencies.
+
+<p align="center">
+  <img src="docs/img/worldcup-overlay.png" alt="World Cup Overlay widget" width="320">
+</p>
 
 ## Plugins
 
-| Plugin | What it does | Folder |
-| ------ | ------------ | ------ |
-| **World Cup Overlay** | Shows a live FIFA World Cup 2026 widget in the top-right corner of every page — the in-progress match, or the next fixture / last result when nothing is live. Data from [TheSportsDB](https://www.thesportsdb.com/). | [`plugins/worldcup-overlay/`](plugins/worldcup-overlay/) |
+| Plugin | What it does |
+| ------ | ------------ |
+| **[World Cup Overlay](plugins/worldcup-overlay/)** | A live FIFA World Cup 2026 widget pinned to the **top-right of every page** — the in-progress match, or the next fixture / last result when nothing is live. Country flags, ‹ › to rotate through all matches, manual refresh, and a minimize-to-ball toggle. Data from [TheSportsDB](https://www.thesportsdb.com/) (free, no signup). |
 
-> New plugins start from [`plugins/_template/`](plugins/_template/). See
-> [docs/adding-a-plugin.md](docs/adding-a-plugin.md).
+## Quick start (just use it)
 
-## Loading a plugin in Chrome (unpacked)
+1. **Get the code**
 
-1. Open `chrome://extensions`.
-2. Toggle **Developer mode** on (top-right).
-3. Click **Load unpacked** and select the plugin's folder (e.g. `plugins/worldcup-overlay/`).
-4. The extension is now active. Reload it from the same page after pulling changes.
+   ```bash
+   git clone https://github.com/jj-jakub/ChromePluginsWC2026.git
+   ```
 
-Each plugin folder *is* the extension root — that folder contains the `manifest.json`.
+2. **Load the plugin in Chrome**
+   - Open `chrome://extensions`
+   - Turn on **Developer mode** (top-right)
+   - Click **Load unpacked** and select the plugin folder, e.g.
+     `ChromePluginsWC2026/plugins/worldcup-overlay`
 
-## Repository layout
+3. Open any normal webpage — the widget appears in the **top-right corner**.
+   (It won't show on `chrome://` pages, which extensions can't touch.)
+
+> After pulling new changes, return to `chrome://extensions` and click the **↻ reload** icon
+> on the plugin's card.
+
+## Develop & contribute
+
+No toolchain to install — these are plain HTML/CSS/JS extensions. The workflow is just
+**edit → reload → check**:
+
+1. Clone the repo and load the plugin unpacked (steps above).
+2. Edit files under the plugin's `src/`.
+3. Hit **↻ reload** on `chrome://extensions`, then refresh a page to see your change.
+4. Sanity-check before committing:
+
+   ```bash
+   # validate JS syntax (no runtime needed)
+   node --check plugins/worldcup-overlay/src/content.js
+
+   # validate the manifest is well-formed JSON
+   python3 -c "import json; json.load(open('plugins/worldcup-overlay/manifest.json'))"
+   ```
+
+### Repository layout
 
 ```
-plugins/                 one folder per extension; each is independently loadable
-  _template/             copy this to start a new plugin
-  worldcup-overlay/      the World Cup top-right overlay
-docs/                    contributing + how to add a plugin
-scripts/                 helper scripts (e.g. package a plugin into a .zip)
-dist/                    build output (git-ignored)
+plugins/
+  _template/          copy this to start a new plugin
+  worldcup-overlay/   the World Cup top-right overlay
+docs/                 contributing notes, how-to, images
+scripts/              helpers (e.g. package a plugin into a .zip)
+dist/                 build output (git-ignored)
 ```
 
-## Packaging for distribution
+### Add a new plugin
+
+```bash
+cp -r plugins/_template plugins/my-new-plugin
+```
+
+Then edit its `manifest.json` (name, description, least-privilege permissions) and fill in
+`src/`. Full guide: [docs/adding-a-plugin.md](docs/adding-a-plugin.md) ·
+conventions: [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+
+### Package for distribution
 
 ```bash
 scripts/package.sh worldcup-overlay     # -> dist/worldcup-overlay.zip
 ```
 
-The zip is what you'd upload to the Chrome Web Store, or share for manual install.
+The zip has `manifest.json` at its root — ready for the Chrome Web Store or manual install.
+
+## Conventions
+
+- **One plugin per folder, independently loadable** — no cross-plugin imports.
+- **Least privilege** — request the narrowest `permissions` / `host_permissions` that work.
+- **Vanilla first** — avoid frameworks and build steps unless a plugin truly needs one.
+- **Isolate injected UI** — namespace ids/classes, reset inherited styles, use a sane `z-index`.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) © 2026 Jakub Jasinski
