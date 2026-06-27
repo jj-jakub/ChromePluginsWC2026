@@ -1,6 +1,7 @@
 /* World Cup Overlay — injected widget styles.
-   Scoped under #wc-overlay-root and reset with `all: initial` so the host page's CSS cannot
-   bleed in and these rules cannot leak out. */
+   Scoped under #wc-overlay-root and reset with `all: initial`. NOTE: `all: initial` also
+   disables color inheritance, so EVERY text element must set its own `color` explicitly —
+   otherwise it falls back to the CSS initial value (black) and renders black-on-green. */
 
 #wc-overlay-root,
 #wc-overlay-root * {
@@ -21,14 +22,14 @@
 /* ---- full card ---- */
 #wc-overlay-root .wc-card {
   display: block;
-  width: 260px;
-  padding: 0;
+  width: 264px;
   border-radius: 14px;
   overflow: hidden;
-  color: #fff;
-  background: linear-gradient(160deg, #0d8a44 0%, #096b34 100%);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  /* darker green => white text clears WCAG AA contrast */
+  background: linear-gradient(160deg, #0a6e36 0%, #064f27 100%);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   animation: wc-pop 0.18s ease-out;
 }
 
@@ -42,25 +43,20 @@
   align-items: center;
   gap: 8px;
   padding: 9px 11px;
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.22);
 }
 
-#wc-overlay-root .wc-dot {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-}
-#wc-overlay-root .wc-dot img { width: 16px; height: 16px; display: block; }
+#wc-overlay-root .wc-dot { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }
+#wc-overlay-root .wc-dot img { width: 18px; height: 18px; display: block; }
 
 #wc-overlay-root .wc-title {
   display: block;
   flex: 1 1 auto;
+  color: #ffffff;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  opacity: 0.92;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -75,37 +71,36 @@
   flex: 0 0 auto;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
-  color: #fff;
-  opacity: 0.8;
+  color: #ffffff;
 }
-#wc-overlay-root .wc-min:hover { background: rgba(255, 255, 255, 0.16); opacity: 1; }
+#wc-overlay-root .wc-min:hover { background: rgba(255, 255, 255, 0.2); }
 
-#wc-overlay-root .wc-body { display: block; padding: 12px 13px 13px; }
+#wc-overlay-root .wc-body { display: block; padding: 12px 13px 10px; }
 
-/* status pill */
+/* status pill — dark translucent base so white text always reads; live is solid red */
 #wc-overlay-root .wc-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  color: #ffffff;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.28);
 }
-#wc-overlay-root .wc-status.live { background: #e7332b; color: #fff; }
-#wc-overlay-root .wc-status.upcoming { background: rgba(255, 255, 255, 0.18); color: #fff; }
-#wc-overlay-root .wc-status.result { background: rgba(255, 255, 255, 0.14); color: #fff; }
+#wc-overlay-root .wc-status.live { background: #e11d2b; }
 
 #wc-overlay-root .wc-live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #fff;
+  background: #ffffff;
   display: inline-block;
   animation: wc-pulse 1.1s ease-in-out infinite;
 }
@@ -114,18 +109,19 @@
   50% { opacity: 0.35; transform: scale(0.7); }
 }
 
-/* match row */
+/* match rows */
 #wc-overlay-root .wc-teams { display: block; }
 #wc-overlay-root .wc-team {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 4px 0;
+  padding: 5px 0;
 }
-#wc-overlay-root .wc-team + .wc-team { border-top: 1px solid rgba(255, 255, 255, 0.12); }
+#wc-overlay-root .wc-team + .wc-team { border-top: 1px solid rgba(255, 255, 255, 0.16); }
 #wc-overlay-root .wc-name {
   display: block;
+  color: #ffffff;
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
@@ -135,7 +131,8 @@
 #wc-overlay-root .wc-team.win .wc-name { font-weight: 800; }
 #wc-overlay-root .wc-score {
   display: block;
-  font-size: 17px;
+  color: #ffffff;
+  font-size: 18px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   min-width: 18px;
@@ -145,32 +142,67 @@
 #wc-overlay-root .wc-meta {
   display: block;
   margin-top: 9px;
+  color: rgba(255, 255, 255, 0.92);
   font-size: 12px;
   font-weight: 500;
-  opacity: 0.92;
 }
 #wc-overlay-root .wc-sub {
   display: block;
   margin-top: 3px;
+  color: rgba(255, 255, 255, 0.72);
   font-size: 11px;
-  opacity: 0.7;
 }
-
-#wc-overlay-root .wc-foot {
-  display: block;
-  margin-top: 10px;
-  font-size: 10px;
-  opacity: 0.6;
-}
-
 #wc-overlay-root .wc-empty {
   display: block;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 13px;
-  opacity: 0.85;
   line-height: 1.4;
 }
 
-/* ---- minimized launcher (soccer-ball button) ---- */
+/* ---- rotate nav ---- */
+#wc-overlay-root .wc-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 11px 2px;
+}
+#wc-overlay-root .wc-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.16);
+}
+#wc-overlay-root .wc-arrow:hover { background: rgba(255, 255, 255, 0.3); }
+#wc-overlay-root .wc-count {
+  display: inline-block;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+#wc-overlay-root .wc-count:hover { background: rgba(255, 255, 255, 0.14); }
+
+#wc-overlay-root .wc-foot-wrap { display: block; padding: 4px 13px 11px; }
+#wc-overlay-root .wc-foot {
+  display: block;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+}
+
+/* ---- minimized launcher ---- */
 #wc-overlay-root .wc-mini {
   display: flex;
   align-items: center;
@@ -179,9 +211,9 @@
   height: 44px;
   border-radius: 50%;
   cursor: pointer;
-  background: linear-gradient(160deg, #0d8a44, #096b34);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(160deg, #0a6e36, #064f27);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 #wc-overlay-root .wc-mini:hover { transform: scale(1.06); }
 #wc-overlay-root .wc-mini img { width: 26px; height: 26px; display: block; }
@@ -192,8 +224,8 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #e7332b;
-  box-shadow: 0 0 0 2px #096b34;
+  background: #e11d2b;
+  box-shadow: 0 0 0 2px #064f27;
   animation: wc-pulse 1.1s ease-in-out infinite;
 }
 

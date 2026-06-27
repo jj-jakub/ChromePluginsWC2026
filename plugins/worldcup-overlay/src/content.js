@@ -1,7 +1,7 @@
 // World Cup Overlay — content script.
-// Injects an isolated top-right widget and renders the state from the service worker:
-//   live match  ->  next fixture  ->  last result.
-// The widget can be minimized to a soccer-ball launcher (persisted), and auto-refreshes.
+// Injects an isolated top-right widget and renders the match deck from the service worker.
+// The ‹ › arrows rotate through every match (earliest -> latest); the default view is the
+// "primary" match (live, else next fixture, else last result). Minimizes to a ball launcher.
 
 (() => {
   const ROOT_ID = "wc-overlay-root";
@@ -10,12 +10,15 @@
 
   const ICON = chrome.runtime.getURL("icons/icon48.png");
   const UI_KEY = "wc_ui";
-  const POLL_MS = 60 * 1000; // re-ask the worker for state
-  const TICK_MS = 30 * 1000; // re-render relative times
+  const POLL_MS = 60 * 1000;
+  const TICK_MS = 30 * 1000;
 
   let minimized = false;
-  let state = null;
+  let deck = []; // sorted matches, each with .matchMode
+  let primaryIndex = 0;
+  let cursor = null; // which match is shown
   let fetchedAt = null;
+  let loadError = false;
 
   const root = document.createElement("div");
   root.id = ROOT_ID;
@@ -75,18 +78,9 @@
       </div>`;
   }
 
-  function bodyFor(st, now) {
-    if (!st || st.mode === "error") {
-      return `<div class="wc-empty">Couldn't load World Cup data. It'll retry shortly.</div>`;
-    }
-    if (st.mode === "empty") {
-      return `<div class="wc-empty">No World Cup matches found right now.</div>`;
-    }
-
-    const m = st.match;
+  function matchBody(m, now) {
     const ko = m.kickoffMs;
-
-    if (st.mode === "live") {
+    if (m.matchMode === "live") {
       const prog = m.progress || m.status || "Live";
       return `
         <span class="wc-status live"><span class="wc-live-dot"></span>Live</span>
@@ -97,8 +91,7 @@
         <span class="wc-meta">${esc(prog)}${ko ? ` · ${esc(clock(ko))} kickoff` : ""}</span>
         ${m.venue ? `<span class="wc-sub">${esc(m.venue)}</span>` : ""}`;
     }
-
-    if (st.mode === "upcoming") {
+    if (m.matchMode === "upcoming") {
       return `
         <span class="wc-status upcoming">Up next</span>
         <div class="wc-teams">
@@ -108,8 +101,6 @@
         <span class="wc-meta">${ko ? `${esc(dayLabel(ko, now))} ${esc(clock(ko))} · ${esc(untilStr(ko, now))}` : "Scheduled"}</span>
         ${m.venue ? `<span class="wc-sub">${esc(m.venue)}</span>` : ""}`;
     }
-
-    // result
     const hs = m.homeScore,
       as = m.awayScore;
     return `
@@ -118,14 +109,15 @@
         ${teamRow(m.home, hs, hs != null && as != null && hs > as)}
         ${teamRow(m.away, as, hs != null && as != null && as > hs)}
       </div>
-      <span class="wc-meta">${ko ? esc(dayLabel(ko, now)) : "Recently played"}</span>
+      <span class="wc-meta">${ko ? `${esc(dayLabel(ko, now))} · ${esc(clock(ko))}` : "Recently played"}</span>
       ${m.venue ? `<span class="wc-sub">${esc(m.venue)}</span>` : ""}`;
   }
 
   function render() {
     const now = Date.now();
+
     if (minimized) {
-      const live = state && state.mode === "live";
+      const live = deck.some((m) => m.matchMode === "live");
       root.innerHTML = `<div class="wc-mini" title="FIFA World Cup — click to expand">
           <img src="${ICON}" alt="World Cup">${live ? '<span class="wc-mini-live"></span>' : ""}
         </div>`;
@@ -133,8 +125,27 @@
       return;
     }
 
+    let body;
+    let nav = "";
+    if (loadError) {
+      body = `<div class="wc-empty">Couldn't load World Cup data. It'll retry shortly.</div>`;
+    } else if (!deck.length) {
+      body = `<div class="wc-empty">No World Cup matches found right now.</div>`;
+    } else {
+      if (cursor == null || cursor >= deck.length) cursor = primaryIndex;
+      body = matchBody(deck[cursor], now);
+      if (deck.length > 1) {
+        nav = `
+          <div class="wc-nav">
+            <button class="wc-arrow" data-dir="-1" title="Earlier match" aria-label="Earlier match">‹</button>
+            <button class="wc-count" title="Jump to current">${cursor + 1} / ${deck.length}</button>
+            <button class="wc-arrow" data-dir="1" title="Later match" aria-label="Later match">›</button>
+          </div>`;
+      }
+    }
+
     const foot = fetchedAt
-      ? `<span class="wc-foot">Updated ${esc(agoStr(fetchedAt, now))}${state && state.stale ? " · offline" : ""} · TheSportsDB</span>`
+      ? `<span class="wc-foot">Updated ${esc(agoStr(fetchedAt, now))}${loadError ? "" : ""} · TheSportsDB</span>`
       : "";
 
     root.innerHTML = `
@@ -144,12 +155,24 @@
           <span class="wc-title">FIFA World Cup</span>
           <span class="wc-min" title="Minimize">–</span>
         </div>
-        <div class="wc-body">
-          ${bodyFor(state, now)}
-          ${foot}
-        </div>
+        <div class="wc-body">${body}</div>
+        ${nav}
+        <div class="wc-foot-wrap">${foot}</div>
       </div>`;
+
     root.querySelector(".wc-min").addEventListener("click", () => setMinimized(true));
+    root.querySelectorAll(".wc-arrow").forEach((b) =>
+      b.addEventListener("click", () => {
+        const dir = Number(b.dataset.dir);
+        cursor = (cursor + dir + deck.length) % deck.length; // wrap-around rotate
+        render();
+      })
+    );
+    const count = root.querySelector(".wc-count");
+    if (count) count.addEventListener("click", () => {
+      cursor = primaryIndex;
+      render();
+    });
   }
 
   // ---- state plumbing ----
@@ -161,25 +184,34 @@
     render();
   }
 
+  function applyState(st) {
+    const matches = (st && st.matches) || [];
+    const prevId = cursor != null && deck[cursor] ? deck[cursor].id : null;
+    deck = matches;
+    primaryIndex = (st && st.index) || 0;
+    if (cursor == null) {
+      cursor = primaryIndex; // first load -> show the primary match
+    } else {
+      const keep = deck.findIndex((m) => m.id === prevId);
+      cursor = keep >= 0 ? keep : Math.min(primaryIndex, Math.max(0, deck.length - 1));
+    }
+  }
+
   function requestState() {
     try {
       chrome.runtime.sendMessage({ type: "WC_GET_STATE" }, (resp) => {
-        if (chrome.runtime.lastError) {
-          state = { mode: "error" };
+        if (chrome.runtime.lastError || !resp || !resp.ok) {
+          loadError = true;
           render();
           return;
         }
-        if (resp && resp.ok) {
-          state = resp.state;
-          state.stale = resp.stale;
-          fetchedAt = resp.fetchedAt || Date.now();
-        } else {
-          state = { mode: "error" };
-        }
+        loadError = false;
+        applyState(resp.state);
+        fetchedAt = resp.fetchedAt || Date.now();
         render();
       });
     } catch (_) {
-      state = { mode: "error" };
+      loadError = true;
       render();
     }
   }
@@ -198,5 +230,5 @@
   }
 
   setInterval(requestState, POLL_MS);
-  setInterval(render, TICK_MS); // keep "in 2h 5m" / "3m ago" fresh between polls
+  setInterval(render, TICK_MS);
 })();

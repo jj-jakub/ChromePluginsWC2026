@@ -5,7 +5,7 @@
 // Network runs here so host_permissions bypass page CORS.
 
 import { fetchEvents } from "./api.js";
-import { classify } from "./wc-state.js";
+import { buildDeck } from "./wc-state.js";
 
 const MSG_GET_STATE = "WC_GET_STATE";
 const CACHE_KEY = "wc_state_cache";
@@ -18,8 +18,12 @@ const TTL_IDLE_MS = 5 * 60 * 1000;
 
 let inFlight = null; // de-dupe concurrent refreshes
 
+function hasLive(state) {
+  return !!(state && state.matches && state.matches.some((m) => m.matchMode === "live"));
+}
+
 function ttlFor(state) {
-  return state && state.mode === "live" ? TTL_LIVE_MS : TTL_IDLE_MS;
+  return hasLive(state) ? TTL_LIVE_MS : TTL_IDLE_MS;
 }
 
 async function readCache() {
@@ -36,7 +40,8 @@ async function refresh() {
   inFlight = (async () => {
     const now = Date.now();
     const events = await fetchEvents(now);
-    const state = classify(events, now);
+    const deck = buildDeck(events, now);
+    const state = { matches: deck.matches, index: deck.primaryIndex, updatedAt: now };
     const entry = { state, fetchedAt: now };
     await writeCache(entry);
     return entry;

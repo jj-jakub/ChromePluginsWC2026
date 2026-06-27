@@ -60,3 +60,28 @@ export function classify(events, now) {
 
   return { mode: "empty", match: null, updatedAt: now };
 }
+
+// Per-match mode (used when rendering any match in the rotatable deck).
+export function matchModeOf(ev, now) {
+  if (isLiveNow(ev, now)) return "live";
+  if (ev.phase === "finished") return "result";
+  return "upcoming";
+}
+
+// Build the chronological deck the user rotates through with the arrows: every match with a
+// known kickoff, sorted earliest -> latest, each tagged with its own mode, plus the index of
+// the "primary" match (what classify() would show by default — live, else next, else last).
+export function buildDeck(events, now) {
+  const matches = (events || [])
+    .filter((e) => e && e.kickoffMs != null)
+    .map((e) => ({ ...e, matchMode: matchModeOf(e, now) }))
+    .sort((a, b) => a.kickoffMs - b.kickoffMs);
+
+  const primary = classify(events, now);
+  let primaryIndex = primary.match
+    ? matches.findIndex((m) => m.id === primary.match.id)
+    : 0;
+  if (primaryIndex < 0) primaryIndex = 0;
+
+  return { matches, primaryIndex };
+}
