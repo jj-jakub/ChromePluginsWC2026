@@ -1,8 +1,10 @@
-// Country -> flag emoji, exposed as a content-script global (self.wcFlagFor).
+// Country -> flag emoji, exposed on the shared content-script namespace (self.WC.flag).
 // Emoji flags are plain text: no network, no <img>, no CSP issues — and they render natively
 // on macOS. Loaded before content.js (see manifest content_scripts order).
+// Covered by test/flags.test.mjs.
 
 (() => {
+  const WC = (self.WC = self.WC || {});
   // Normalize a team name to a comparable key: lowercase, strip accents & non-letters.
   const norm = (s) =>
     String(s || "")
@@ -60,5 +62,5 @@
   MAP[norm("Scotland")] = subdiv("gbsct");
   MAP[norm("Wales")] = subdiv("gbwls");
 
-  self.wcFlagFor = (name) => MAP[norm(name)] || "";
+  WC.flag = (name) => MAP[norm(name)] || "";
 })();

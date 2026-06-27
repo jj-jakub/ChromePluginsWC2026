@@ -29,6 +29,8 @@ mkdir -p "$ROOT/dist"
 rm -f "$OUT"
 
 # Zip from inside the plugin dir so manifest.json sits at the archive root.
-( cd "$SRC" && zip -r -q -X "$OUT" . -x '*.DS_Store' '*/secrets.local.js' )
+# Exclude dev-only files (tests, OS cruft, local secrets) from the distributed extension.
+( cd "$SRC" && zip -r -q -X "$OUT" . \
+    -x '*.DS_Store' '*/secrets.local.js' 'test/*' '*.test.mjs' )
 
 echo "packaged -> dist/$PLUGIN.zip"

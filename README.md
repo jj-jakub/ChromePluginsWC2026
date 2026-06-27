@@ -44,8 +44,8 @@ No toolchain to install — these are plain HTML/CSS/JS extensions. The workflow
 4. Sanity-check before committing:
 
    ```bash
-   # validate JS syntax (no runtime needed)
-   node --check plugins/worldcup-overlay/src/content.js
+   # run the unit tests for the pure logic (zero dependencies)
+   cd plugins/worldcup-overlay && node --test
 
    # validate the manifest is well-formed JSON
    python3 -c "import json; json.load(open('plugins/worldcup-overlay/manifest.json'))"

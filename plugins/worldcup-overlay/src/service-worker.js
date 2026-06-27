@@ -1,48 +1,45 @@
 // World Cup Overlay — background service worker (MV3, module).
 //
-// Fetches World Cup data from TheSportsDB, computes the single "what to show" state, caches it,
-// keeps it warm with a chrome.alarms timer, and answers WC_GET_STATE from content scripts.
-// Network runs here so host_permissions bypass page CORS.
+// Fetches World Cup data from TheSportsDB, computes the match deck, caches it, keeps it warm on
+// a chrome.alarms timer, and answers MSG.GET_STATE from content scripts. Network runs here so
+// host_permissions bypass page CORS.
 
 import { fetchEvents } from "./api.js";
 import { buildDeck } from "./wc-state.js";
+import { ALARM, CACHE, MSG } from "./config.js";
 
-const MSG_GET_STATE = "WC_GET_STATE";
-const CACHE_KEY = "wc_state_cache";
-const ALARM = "wc-refresh";
+/**
+ * @typedef {Object} WcState   What the overlay renders.
+ * @property {WcEvent[]} matches   Chronological deck (each tagged with matchMode).
+ * @property {number}    index     Index of the primary match to show first.
+ * @property {number}    updatedAt Epoch ms the state was computed.
+ */
 
-// Serve cached state for this long before refetching. Short when a match is live so scores/
-// status move; longer otherwise to be gentle on the API.
-const TTL_LIVE_MS = 60 * 1000;
-const TTL_IDLE_MS = 5 * 60 * 1000;
+const TAG = "[worldcup-overlay]";
 
-let inFlight = null; // de-dupe concurrent refreshes
+let inFlight = null; // de-dupes concurrent refreshes
 
-function hasLive(state) {
-  return !!(state && state.matches && state.matches.some((m) => m.matchMode === "live"));
-}
+const hasLive = (state) =>
+  !!state?.matches?.some((m) => m.matchMode === "live");
 
-function ttlFor(state) {
-  return hasLive(state) ? TTL_LIVE_MS : TTL_IDLE_MS;
-}
+const ttlFor = (state) => (hasLive(state) ? CACHE.TTL_LIVE_MS : CACHE.TTL_IDLE_MS);
 
 async function readCache() {
-  const got = await chrome.storage.local.get(CACHE_KEY);
-  return got[CACHE_KEY] || null;
+  const got = await chrome.storage.local.get(CACHE.KEY);
+  return got[CACHE.KEY] || null;
 }
 
 async function writeCache(entry) {
-  await chrome.storage.local.set({ [CACHE_KEY]: entry });
+  await chrome.storage.local.set({ [CACHE.KEY]: entry });
 }
 
+/** Fetch + classify into a fresh state, persisting it. De-duped across concurrent callers. */
 async function refresh() {
   if (inFlight) return inFlight;
   inFlight = (async () => {
     const now = Date.now();
-    const events = await fetchEvents(now);
-    const deck = buildDeck(events, now);
-    const state = { matches: deck.matches, index: deck.primaryIndex, updatedAt: now };
-    const entry = { state, fetchedAt: now };
+    const { matches, primaryIndex } = buildDeck(await fetchEvents(now), now);
+    const entry = { state: { matches, index: primaryIndex, updatedAt: now }, fetchedAt: now };
     await writeCache(entry);
     return entry;
   })();
@@ -53,13 +50,14 @@ async function refresh() {
   }
 }
 
-// Return fresh-enough cache, else refetch. `force` skips the cache (manual refresh button).
-// On fetch failure, fall back to stale cache so the overlay degrades gracefully.
+/**
+ * Return fresh-enough cache, else refetch. `force` skips the cache (manual refresh button).
+ * On fetch failure, fall back to stale cache so the overlay degrades gracefully.
+ */
 async function getState(force) {
   const cached = await readCache();
-  const fresh =
-    !force && cached && Date.now() - cached.fetchedAt < ttlFor(cached.state) ? cached : null;
-  if (fresh) return { ok: true, state: fresh.state, fetchedAt: fresh.fetchedAt };
+  const fresh = !force && cached && Date.now() - cached.fetchedAt < ttlFor(cached.state);
+  if (fresh) return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt };
 
   try {
     const entry = await refresh();
@@ -68,32 +66,30 @@ async function getState(force) {
     if (cached) {
       return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, stale: true };
     }
-    return { ok: false, error: String(err && err.message ? err.message : err) };
+    return { ok: false, error: String(err?.message || err) };
   }
 }
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (msg && msg.type === MSG_GET_STATE) {
+  if (msg?.type === MSG.GET_STATE) {
     getState(msg.force).then(sendResponse);
-    return true; // async response
+    return true; // keep the channel open for the async response
   }
   return false;
 });
 
 function ensureAlarm() {
-  chrome.alarms.create(ALARM, { periodInMinutes: 2 });
+  chrome.alarms.create(ALARM.NAME, { periodInMinutes: ALARM.PERIOD_MIN });
+}
+
+function warmUp() {
+  ensureAlarm();
+  refresh().catch((e) => console.warn(TAG, "refresh failed", e));
 }
 
 chrome.alarms.onAlarm.addListener((a) => {
-  if (a.name === ALARM) refresh().catch((e) => console.warn("[worldcup-overlay] refresh", e));
+  if (a.name === ALARM.NAME) refresh().catch((e) => console.warn(TAG, "alarm refresh", e));
 });
 
-chrome.runtime.onInstalled.addListener(() => {
-  ensureAlarm();
-  refresh().catch((e) => console.warn("[worldcup-overlay] initial refresh", e));
-});
-
-chrome.runtime.onStartup.addListener(() => {
-  ensureAlarm();
-  refresh().catch(() => {});
-});
+chrome.runtime.onInstalled.addListener(warmUp);
+chrome.runtime.onStartup.addListener(warmUp);
