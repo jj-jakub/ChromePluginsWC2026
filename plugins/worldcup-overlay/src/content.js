@@ -19,6 +19,7 @@
   let cursor = null; // which match is shown
   let fetchedAt = null;
   let loadError = false;
+  let refreshing = false;
 
   const root = document.createElement("div");
   root.id = ROOT_ID;
@@ -70,10 +71,13 @@
     return `${Math.floor(h / 24)}d ago`;
   }
 
+  const flagOf = (name) => (typeof self.wcFlagFor === "function" ? self.wcFlagFor(name) : "");
+
   // ---- render ----
   function teamRow(name, score, win) {
+    const flag = flagOf(name);
     return `<div class="wc-team${win ? " win" : ""}">
-        <span class="wc-name">${esc(name)}</span>
+        <span class="wc-name">${flag ? `<span class="wc-flag">${flag}</span>` : ""}${esc(name)}</span>
         <span class="wc-score">${score == null ? "" : esc(score)}</span>
       </div>`;
   }
@@ -153,7 +157,8 @@
         <div class="wc-head">
           <span class="wc-dot"><img src="${ICON}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
-          <span class="wc-min" title="Minimize">–</span>
+          <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
+          <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
         </div>
         <div class="wc-body">${body}</div>
         ${nav}
@@ -161,6 +166,9 @@
       </div>`;
 
     root.querySelector(".wc-min").addEventListener("click", () => setMinimized(true));
+    root.querySelector(".wc-refresh").addEventListener("click", () => {
+      if (!refreshing) requestState(true);
+    });
     root.querySelectorAll(".wc-arrow").forEach((b) =>
       b.addEventListener("click", () => {
         const dir = Number(b.dataset.dir);
@@ -197,9 +205,14 @@
     }
   }
 
-  function requestState() {
+  function requestState(force) {
+    if (force) {
+      refreshing = true;
+      render(); // show the spinner immediately
+    }
     try {
-      chrome.runtime.sendMessage({ type: "WC_GET_STATE" }, (resp) => {
+      chrome.runtime.sendMessage({ type: "WC_GET_STATE", force: !!force }, (resp) => {
+        refreshing = false;
         if (chrome.runtime.lastError || !resp || !resp.ok) {
           loadError = true;
           render();
@@ -211,6 +224,7 @@
         render();
       });
     } catch (_) {
+      refreshing = false;
       loadError = true;
       render();
     }

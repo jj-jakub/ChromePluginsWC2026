@@ -62,12 +62,12 @@
   text-overflow: ellipsis;
 }
 
-#wc-overlay-root .wc-min {
+#wc-overlay-root .wc-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
   border-radius: 6px;
   cursor: pointer;
@@ -75,7 +75,13 @@
   line-height: 1;
   color: #ffffff;
 }
-#wc-overlay-root .wc-min:hover { background: rgba(255, 255, 255, 0.2); }
+#wc-overlay-root .wc-icon:hover { background: rgba(255, 255, 255, 0.2); }
+#wc-overlay-root .wc-refresh { font-size: 16px; }
+#wc-overlay-root .wc-spin { animation: wc-rot 0.7s linear infinite; pointer-events: none; }
+@keyframes wc-rot {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
 #wc-overlay-root .wc-body { display: block; padding: 12px 13px 10px; }
 
@@ -127,6 +133,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+#wc-overlay-root .wc-flag {
+  display: inline-block;
+  margin-right: 7px;
+  font-size: 15px;
+  line-height: 1;
+  vertical-align: -1px;
 }
 #wc-overlay-root .wc-team.win .wc-name { font-weight: 800; }
 #wc-overlay-root .wc-score {

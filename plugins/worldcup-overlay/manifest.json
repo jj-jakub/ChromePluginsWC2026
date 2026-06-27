@@ -26,7 +26,7 @@
     {
       "matches": ["<all_urls>"],
       "css": ["src/content.css"],
-      "js": ["src/content.js"],
+      "js": ["src/flags.js", "src/content.js"],
       "run_at": "document_idle"
     }
   ],

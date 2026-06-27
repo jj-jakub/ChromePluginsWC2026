@@ -6,6 +6,11 @@ A floating widget pinned to the **top-right corner of every page** showing FIFA 
 - **Upcoming** — if nothing is live, the next scheduled fixture (with kickoff time).
 - **Result** — if no fixtures are upcoming, the most recent finished match + score.
 
+Each team shows its **flag** (emoji — no images, so no broken icons on strict-CSP sites).
+Use the **‹ ›** arrows to rotate through the whole match deck (earliest → latest); the
+**counter** in the middle jumps back to the current match. The header **↻** forces a manual
+refresh; the widget also auto-refreshes and can be minimized to a soccer-ball launcher.
+
 ## Install (unpacked)
 
 `chrome://extensions` → **Developer mode** → **Load unpacked** → select this folder

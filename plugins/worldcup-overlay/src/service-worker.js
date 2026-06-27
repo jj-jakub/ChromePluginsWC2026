@@ -53,12 +53,12 @@ async function refresh() {
   }
 }
 
-// Return fresh-enough cache, else refetch. On fetch failure, fall back to stale cache so the
-// overlay degrades gracefully instead of going blank.
-async function getState() {
+// Return fresh-enough cache, else refetch. `force` skips the cache (manual refresh button).
+// On fetch failure, fall back to stale cache so the overlay degrades gracefully.
+async function getState(force) {
   const cached = await readCache();
   const fresh =
-    cached && Date.now() - cached.fetchedAt < ttlFor(cached.state) ? cached : null;
+    !force && cached && Date.now() - cached.fetchedAt < ttlFor(cached.state) ? cached : null;
   if (fresh) return { ok: true, state: fresh.state, fetchedAt: fresh.fetchedAt };
 
   try {
@@ -74,7 +74,7 @@ async function getState() {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === MSG_GET_STATE) {
-    getState().then(sendResponse);
+    getState(msg.force).then(sendResponse);
     return true; // async response
   }
   return false;
