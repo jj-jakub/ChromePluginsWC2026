@@ -8,6 +8,7 @@ import { fetchEvents, fetchSeason } from "./api.js";
 import { buildDeck, applyFavorites } from "./wc-state.js";
 import { tableFor } from "./standings.js";
 import { teamForm } from "./form.js";
+import { badgeFor } from "./badge.js";
 import { nextDelay, classifyHealth } from "./backoff.js";
 import { ALARM, CACHE, SEASON, MSG, SETTINGS, HEALTH } from "./config.js";
 
@@ -95,6 +96,23 @@ async function decorate(baseState, now) {
   };
   const withForm = matches.map((m) => ({ ...m, homeForm: formOf(m.home), awayForm: formOf(m.away) }));
   return { matches: withForm, index, updatedAt: baseState.updatedAt };
+}
+
+// --- toolbar badge (live score / countdown to the next/favorite fixture) ---
+async function updateBadge(decorated) {
+  try {
+    const { text, color, title } = badgeFor(decorated, Date.now());
+    await chrome.action.setBadgeText({ text });
+    if (color) await chrome.action.setBadgeBackgroundColor({ color });
+    await chrome.action.setTitle({ title });
+  } catch (_) {}
+}
+
+async function refreshBadgeFromCache() {
+  try {
+    const cached = await readCache();
+    if (cached) await updateBadge(await decorate(cached.state, Date.now()));
+  } catch (_) {}
 }
 
 // --- season events + group standings (lazy: only fetched when the user opens the table) ---
@@ -189,6 +207,9 @@ async function refresh(force) {
       const entry = { state: { matches, index: primaryIndex, updatedAt: now }, fetchedAt: now };
       await writeCache(entry);
       await writeHealth({ failures: 0, lastSuccessMs: now, nextRetryAt: 0 });
+      try {
+        await updateBadge(await decorate(entry.state, now));
+      } catch (_) {}
       return entry;
     } catch (err) {
       if (!err?.backoff) {
@@ -282,6 +303,7 @@ function allowSessionFromContent() {
 function warmUp() {
   allowSessionFromContent();
   ensureAlarm();
+  refreshBadgeFromCache(); // show a badge from cache immediately, before the fetch lands
   refresh().catch((e) => console.warn(TAG, "refresh failed", e));
   // Warm the season cache so group standings + team form are ready without a first round-trip.
   getSeasonEvents(false).catch((e) => console.warn(TAG, "season warm failed", e));
@@ -291,9 +313,12 @@ chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === ALARM.NAME) refresh().catch((e) => console.warn(TAG, "alarm refresh", e));
 });
 
-// Re-arm the alarm when the user changes their refresh interval.
+// Re-arm the alarm (refresh interval) and re-rank the badge (favorites) on a settings change.
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "sync" && changes[SETTINGS.KEY]) ensureAlarm();
+  if (area === "sync" && changes[SETTINGS.KEY]) {
+    ensureAlarm();
+    refreshBadgeFromCache();
+  }
 });
 
 chrome.runtime.onInstalled.addListener(warmUp);
