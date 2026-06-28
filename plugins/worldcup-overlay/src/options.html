@@ -49,6 +49,17 @@
       </section>
 
       <section class="card">
+        <h2>Sites</h2>
+        <p class="hint">Choose where the overlay appears. One host per line; use a leading dot
+          (<code>.example.com</code>) to include subdomains, or <code>*</code> for all sites.</p>
+        <div class="corners two" role="radiogroup" aria-label="Site mode">
+          <label><input type="radio" name="siteMode" value="deny" /><span>Hide on these sites</span></label>
+          <label><input type="radio" name="siteMode" value="allow" /><span>Show only on these</span></label>
+        </div>
+        <textarea id="siteRules" class="rules" rows="3" placeholder="mail.google.com&#10;.bank.com" spellcheck="false"></textarea>
+      </section>
+
+      <section class="card">
         <h2>Notifications</h2>
         <p class="hint">Desktop alerts even when no tab is focused.</p>
         <label class="row" for="notifyEnabled">

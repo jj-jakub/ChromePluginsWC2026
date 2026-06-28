@@ -38,6 +38,7 @@
         "src/agenda.js",
         "src/ics.js",
         "src/score-diff.js",
+        "src/site-match.js",
         "src/render.js",
         "src/content.js"
       ],

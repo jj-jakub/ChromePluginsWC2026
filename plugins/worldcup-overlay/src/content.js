@@ -43,8 +43,9 @@
   let standings = null; // { group, rows, partial, loading, error }
   let standingsSeq = 0; // recency token so a stale standings response can't clobber a fresher one
   let agendaMode = false; // showing the all-fixtures agenda list instead of a single match
-  let flash = null; // { ids:[matchId], announce } — a fresh score change to pulse + announce
+  let flash = null; // { ids:[matchId] } — a fresh score change to pulse
   let flashTimer = null;
+  let blocked = false; // per-site allow/deny: true => hidden on this host
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -66,10 +67,18 @@
   const cardHost = document.createElement("div");
   root.appendChild(cardHost);
 
-  // ---- apply non-content preferences (position, etc.) ----
+  // ---- apply non-content preferences (position, site rules, etc.) ----
   function applyChrome() {
     root.classList.remove("wc-pos-tl", "wc-pos-tr", "wc-pos-bl", "wc-pos-br");
     root.classList.add("wc-pos-" + settings.corner);
+  }
+
+  // Per-site allow/deny: hide the whole widget where the user excluded it (no new permission —
+  // the content script already knows its own hostname). Re-evaluated live on a settings change.
+  function evalSite() {
+    const allowed = !WC.site || WC.site.siteAllowed(location.hostname, settings.siteRules, settings.siteMode);
+    blocked = !allowed;
+    root.hidden = blocked;
   }
 
   // The deck actually shown: all matches, or favorites-only when the filter is on.
@@ -98,6 +107,7 @@
 
   // ---- render + wire events ----
   function render() {
+    if (blocked) return; // hidden on this site — nothing to draw
     const now = Date.now();
     if (minimized) {
       cardHost.innerHTML = WC.render.mini({ deck, icon: ICON });
@@ -352,6 +362,7 @@
 
   // ---- init ----
   function start() {
+    evalSite();
     applyChrome();
     render();
     requestState();
@@ -369,9 +380,10 @@
           const prevFav = JSON.stringify(settings.favorites || []);
           settings = settingsApi.normalize(changes[SETTINGS_KEY].newValue);
           applyChrome();
+          evalSite(); // a rules/mode change may show or hide the widget here
           if (JSON.stringify(settings.favorites || []) !== prevFav) {
             requestState(); // re-rank + re-tag isFavorite from the SW (also re-renders)
-          } else if (!minimized) {
+          } else {
             render();
           }
         }

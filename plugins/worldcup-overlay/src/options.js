@@ -12,13 +12,18 @@
 
   const refreshLabel = (v) => (v === 1 ? "every minute" : `every ${v} min`);
 
-  function reflect(s) {
+  function reflect(s, includeText = true) {
     document.querySelectorAll('input[name="corner"]').forEach((r) => {
       r.checked = r.value === s.corner;
     });
     $("startMinimized").checked = s.startMinimized;
     $("refreshMins").value = String(s.refreshMins);
     $("refreshOut").textContent = refreshLabel(s.refreshMins);
+
+    document.querySelectorAll('input[name="siteMode"]').forEach((r) => {
+      r.checked = r.value === s.siteMode;
+    });
+    if (includeText) $("siteRules").value = s.siteRules.join("\n"); // don't clobber mid-typing
 
     $("notifyEnabled").checked = s.notify.enabled;
     $("notifyFavoritesOnly").checked = s.notify.favoritesOnly;
@@ -36,6 +41,8 @@
       corner,
       startMinimized: $("startMinimized").checked,
       refreshMins: Number($("refreshMins").value),
+      siteMode: (document.querySelector('input[name="siteMode"]:checked') || {}).value,
+      siteRules: $("siteRules").value.split("\n"),
       notify: {
         ...current.notify,
         enabled: $("notifyEnabled").checked,
@@ -69,7 +76,7 @@
 
   function onChange() {
     current = collect();
-    reflect(current); // echo back the clamped/whitelisted value
+    reflect(current, false); // echo clamped controls, but leave the textarea as typed
     clearTimeout(writeTimer);
     writeTimer = setTimeout(persist, 400);
   }
@@ -96,8 +103,8 @@
   }
 
   const FIELDS =
-    'input[name="corner"], #startMinimized, #refreshMins, #notifyEnabled, #notifyFavoritesOnly, ' +
-    "#notifyKickoff, #notifyGoals, #notifyFullTime, #notifyLead";
+    'input[name="corner"], #startMinimized, #refreshMins, input[name="siteMode"], #siteRules, ' +
+    "#notifyEnabled, #notifyFavoritesOnly, #notifyKickoff, #notifyGoals, #notifyFullTime, #notifyLead";
   document.addEventListener("input", (e) => {
     if (e.target.matches(FIELDS)) onChange();
   });
