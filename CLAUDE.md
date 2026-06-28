@@ -34,6 +34,7 @@ src/
   reconcile.js       PURE: dedupe duplicate ids across endpoints; most-progressed wins; lowConfidence flag
   backoff.js         PURE: nextDelay (capped exponential) + classifyHealth (ok|degraded|down)
   standings.js       PURE: computeStandings / tableFor — group tables from finished results (FIFA tiebreakers, top-2 qualify)
+  form.js            PURE: teamForm — a nation's recent W/D/L + GF/GA from finished season events
   ── content scripts (classic; share one self.WC namespace, loaded in this order before content.js) ──
   format.js          self.WC.fmt — esc / clock / dayLabel / until / ago
   flags.js           self.WC.flag — country → emoji flag
@@ -44,7 +45,7 @@ src/
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
-test/                node --test (80 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings
+test/                node --test (86 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form
 ```
 
 ## Key decisions (this is why things are the way they are)

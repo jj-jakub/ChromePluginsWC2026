@@ -146,6 +146,23 @@ test("card with favFilter on and an empty filtered deck shows favorites empty co
   assert.match(html, /No favorite matches/);
 });
 
+test("matchBody renders a recent-form strip when form data is attached", () => {
+  const mm = {
+    id: "1", home: "Brazil", away: "Norway", homeScore: 2, awayScore: 1,
+    matchMode: "result", kickoffMs: NOW - H,
+    homeForm: { last: ["W", "W", "D"] }, awayForm: { last: ["L", "D"] },
+  };
+  const html = matchBody(mm, NOW, []);
+  assert.match(html, /wc-form/);
+  assert.match(html, /wc-chip wc-chip-w/);
+  assert.match(html, /wc-chip wc-chip-l/);
+});
+
+test("matchBody omits the form strip when there's no form data", () => {
+  const html = matchBody(m({ matchMode: "upcoming", ko: NOW + H }), NOW, []);
+  assert.doesNotMatch(html, /wc-form/);
+});
+
 test("card in table mode renders the standings and hides the match nav", () => {
   const standings = {
     group: "Group A",

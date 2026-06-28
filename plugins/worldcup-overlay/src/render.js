@@ -34,17 +34,40 @@
       </div>`;
   }
 
+  // last-N W/D/L chips for one team, or "".
+  function formChips(form) {
+    if (!form || !form.last || !form.last.length) return "";
+    return form.last
+      .map((r) => `<span class="wc-chip wc-chip-${String(r).toLowerCase()}">${esc(r)}</span>`)
+      .join("");
+  }
+
+  // A two-row recent-form strip (home then away), or "" when no form data is attached.
+  function formStrip(m) {
+    const h = formChips(m.homeForm);
+    const a = formChips(m.awayForm);
+    if (!h && !a) return "";
+    const hf = flagOf(m.home);
+    const af = flagOf(m.away);
+    return `<div class="wc-form">
+        <span class="wc-formrow">${hf ? `<span class="wc-flag">${hf}</span>` : ""}${h}</span>
+        <span class="wc-formrow">${af ? `<span class="wc-flag">${af}</span>` : ""}${a}</span>
+      </div>`;
+  }
+
   function matchBody(m, now, favorites) {
     const ko = m.kickoffMs;
     const venue = m.venue ? `<span class="wc-sub">${esc(m.venue)}</span>` : "";
     const fH = isFav(m.home, favorites);
     const fA = isFav(m.away, favorites);
+    const form = formStrip(m);
 
     if (m.matchMode === "live") {
       const prog = m.progress || m.status || "Live";
       return `
         <span class="wc-status live"><span class="wc-live-dot"></span>Live</span>
         <div class="wc-teams">${teamRow(m.home, m.homeScore, false, fH)}${teamRow(m.away, m.awayScore, false, fA)}</div>
+        ${form}
         <span class="wc-meta">${esc(prog)}${ko ? ` · ${esc(clock(ko))} kickoff` : ""}</span>
         ${venue}`;
     }
@@ -53,6 +76,7 @@
       return `
         <span class="wc-status upcoming">Up next</span>
         <div class="wc-teams">${teamRow(m.home, null, false, fH)}${teamRow(m.away, null, false, fA)}</div>
+        ${form}
         <span class="wc-meta">${when}</span>
         ${venue}`;
     }
@@ -63,6 +87,7 @@
     return `
       <span class="wc-status result">Full time</span>
       <div class="wc-teams">${teamRow(m.home, hs, decided && hs > as, fH)}${teamRow(m.away, as, decided && as > hs, fA)}</div>
+      ${form}
       <span class="wc-meta">${when}</span>
       ${venue}`;
   }

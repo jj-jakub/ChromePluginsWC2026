@@ -7,6 +7,7 @@
 import { fetchEvents, fetchSeason } from "./api.js";
 import { buildDeck, applyFavorites } from "./wc-state.js";
 import { tableFor } from "./standings.js";
+import { teamForm } from "./form.js";
 import { nextDelay, classifyHealth } from "./backoff.js";
 import { ALARM, CACHE, SEASON, MSG, SETTINGS, HEALTH } from "./config.js";
 
@@ -69,11 +70,25 @@ async function readFavorites() {
   }
 }
 
-/** Overlay the user's favorites onto a base deck: tag isFavorite + pick the favorite-aware index. */
+/** Cached season events (no fetch — used to attach form without slowing getState). */
+async function readSeasonCacheEvents() {
+  const c = await readSeasonCache();
+  return c && Array.isArray(c.events) ? c.events : null;
+}
+
+/**
+ * Overlay derived data onto a base deck: tag isFavorite + favorite-aware index, and (when the
+ * season cache is warm) attach each side's recent form. Reads only — never triggers a fetch.
+ */
 async function decorate(baseState, now) {
   const favorites = await readFavorites();
   const { matches, index } = applyFavorites(baseState.matches, now, favorites, baseState.index);
-  return { matches, index, updatedAt: baseState.updatedAt };
+  const season = await readSeasonCacheEvents();
+  const withForm =
+    season && season.length
+      ? matches.map((m) => ({ ...m, homeForm: teamForm(season, m.home), awayForm: teamForm(season, m.away) }))
+      : matches;
+  return { matches: withForm, index, updatedAt: baseState.updatedAt };
 }
 
 // --- season events + group standings (lazy: only fetched when the user opens the table) ---
@@ -235,6 +250,8 @@ function warmUp() {
   allowSessionFromContent();
   ensureAlarm();
   refresh().catch((e) => console.warn(TAG, "refresh failed", e));
+  // Warm the season cache so group standings + team form are ready without a first round-trip.
+  getSeasonEvents(false).catch((e) => console.warn(TAG, "season warm failed", e));
 }
 
 chrome.alarms.onAlarm.addListener((a) => {

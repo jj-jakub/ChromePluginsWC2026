@@ -207,6 +207,40 @@
   text-align: right;
 }
 
+/* recent-form strip (W/D/L chips under the teams) */
+#wc-overlay-root .wc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 9px;
+}
+#wc-overlay-root .wc-formrow {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 15px;
+}
+#wc-overlay-root .wc-formrow .wc-flag {
+  font-size: 12px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+#wc-overlay-root .wc-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+}
+#wc-overlay-root .wc-chip-w { background: #1f9d55; }
+#wc-overlay-root .wc-chip-d { background: rgba(255, 255, 255, 0.3); }
+#wc-overlay-root .wc-chip-l { background: #c0392b; }
+
 #wc-overlay-root .wc-meta {
   display: block;
   margin-top: 9px;
