@@ -36,6 +36,7 @@
   let refreshing = false;
   let health = null;
   let settings = settingsApi.DEFAULTS;
+  let favFilter = false; // show favorites-only when on
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -50,6 +51,18 @@
     root.classList.add("wc-pos-" + settings.corner);
   }
 
+  // The deck actually shown: all matches, or favorites-only when the filter is on.
+  function viewDeck() {
+    return favFilter ? deck.filter((m) => m.isFavorite) : deck;
+  }
+
+  // Index within `vd` of the SW's primary match, else 0.
+  function clampPrimaryToView(vd) {
+    const pid = deck[primaryIndex] && deck[primaryIndex].id;
+    const i = vd.findIndex((m) => m.id === pid);
+    return i >= 0 ? i : 0;
+  }
+
   // ---- render + wire events ----
   function render() {
     const now = Date.now();
@@ -58,9 +71,16 @@
       root.querySelector(".wc-mini").addEventListener("click", () => setMinimized(false));
       return;
     }
-    if (deck.length && (cursor == null || cursor >= deck.length)) cursor = primaryIndex;
+    const canFilter = deck.some((m) => m.isFavorite);
+    if (!canFilter) favFilter = false; // nothing to filter to
+    const vd = viewDeck();
+    if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
+
     root.innerHTML = WC.render.card(
-      { deck, cursor, fetchedAt, stale, refreshing, loadError, health, icon: ICON },
+      {
+        deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
+        favorites: settings.favorites, favFilter, canFilter, icon: ICON,
+      },
       now
     );
 
@@ -73,18 +93,46 @@
     );
     const count = root.querySelector(".wc-count");
     if (count) count.addEventListener("click", () => jumpToPrimary());
+    root.querySelectorAll(".wc-star").forEach((b) =>
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleFavorite(b.dataset.team);
+      })
+    );
+    const favBtn = root.querySelector(".wc-favfilter");
+    if (favBtn) favBtn.addEventListener("click", () => toggleFavFilter());
   }
 
   // ---- actions ----
   function rotate(dir) {
-    if (!deck.length) return;
-    cursor = (cursor + dir + deck.length) % deck.length; // wrap-around
+    const vd = viewDeck();
+    if (!vd.length) return;
+    cursor = (cursor + dir + vd.length) % vd.length; // wrap-around
     render();
   }
 
   function jumpToPrimary() {
-    cursor = primaryIndex;
+    cursor = clampPrimaryToView(viewDeck());
     render();
+  }
+
+  function toggleFavFilter() {
+    favFilter = !favFilter;
+    cursor = null; // re-anchor to the primary within the new view
+    render();
+  }
+
+  // Toggle a nation in settings.favorites; the storage.onChanged handler re-ranks + re-renders.
+  function toggleFavorite(team) {
+    if (!team) return;
+    const favs = (settings.favorites || []).slice();
+    const k = team.trim().toLowerCase();
+    const i = favs.findIndex((f) => f.trim().toLowerCase() === k);
+    if (i >= 0) favs.splice(i, 1);
+    else favs.push(team);
+    try {
+      chrome.storage.sync.set({ [SETTINGS_KEY]: settingsApi.normalize({ ...settings, favorites: favs }) });
+    } catch (_) {}
   }
 
   function setMinimized(v) {
@@ -99,14 +147,16 @@
 
   // Adopt new state, keeping the same match in view across refreshes when possible.
   function applyState(st) {
-    const prevId = cursor != null && deck[cursor] ? deck[cursor].id : null;
+    const vdPrev = viewDeck();
+    const prevId = cursor != null && vdPrev[cursor] ? vdPrev[cursor].id : null;
     deck = (st && st.matches) || [];
     primaryIndex = (st && st.index) || 0;
+    const vd = viewDeck();
     if (cursor == null) {
-      cursor = primaryIndex;
+      cursor = clampPrimaryToView(vd);
     } else {
-      const keep = deck.findIndex((m) => m.id === prevId);
-      cursor = keep >= 0 ? keep : Math.min(primaryIndex, Math.max(0, deck.length - 1));
+      const keep = vd.findIndex((m) => m.id === prevId);
+      cursor = keep >= 0 ? keep : clampPrimaryToView(vd);
     }
   }
 
@@ -166,14 +216,21 @@
     tickId = setInterval(render, TICK_MS);
   }
 
-  // React to settings edited in the options page (or the overlay's own controls) while a tab is open.
+  // React to settings edited in the options page (or the overlay's own ★ controls) while a tab is
+  // open. A favorites change re-ranks the deck (asks the SW to re-tag/re-index); other changes just
+  // re-apply position and re-render.
   function watchSettings() {
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
         if (area === "sync" && changes[SETTINGS_KEY]) {
+          const prevFav = JSON.stringify(settings.favorites || []);
           settings = settingsApi.normalize(changes[SETTINGS_KEY].newValue);
           applyChrome();
-          if (!minimized) render();
+          if (JSON.stringify(settings.favorites || []) !== prevFav) {
+            requestState(); // re-rank + re-tag isFavorite from the SW (also re-renders)
+          } else if (!minimized) {
+            render();
+          }
         }
       });
     } catch (_) {}

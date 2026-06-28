@@ -85,6 +85,9 @@
 }
 #wc-overlay-root .wc-icon:hover { background: rgba(255, 255, 255, 0.2); }
 #wc-overlay-root .wc-refresh { font-size: 16px; }
+/* favorites-only filter toggle (gold when active) */
+#wc-overlay-root .wc-favfilter { color: rgba(255, 255, 255, 0.78); font-size: 13px; }
+#wc-overlay-root .wc-favfilter.on { color: #ffd23f; }
 #wc-overlay-root .wc-spin { animation: wc-rot 0.7s linear infinite; pointer-events: none; }
 @keyframes wc-rot {
   from { transform: rotate(0deg); }
@@ -152,12 +155,36 @@
 #wc-overlay-root .wc-team + .wc-team { border-top: 1px solid rgba(255, 255, 255, 0.16); }
 #wc-overlay-root .wc-name {
   display: block;
+  flex: 1 1 auto;
   color: #ffffff;
   font-size: 15px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* per-team follow ★ (dim outline -> gold when followed) */
+#wc-overlay-root .wc-star {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+}
+#wc-overlay-root .wc-star:hover {
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.12);
+}
+#wc-overlay-root .wc-star.on {
+  color: #ffd23f;
 }
 #wc-overlay-root .wc-flag {
   display: inline-block;
@@ -234,6 +261,18 @@
 #wc-overlay-root .wc-count:hover { background: rgba(255, 255, 255, 0.14); }
 
 #wc-overlay-root .wc-foot-wrap { display: block; padding: 4px 13px 11px; }
+#wc-overlay-root .wc-yournext {
+  display: block;
+  margin-bottom: 4px;
+  color: #ffe9a8;
+  font-size: 11px;
+  font-weight: 600;
+}
+#wc-overlay-root .wc-yournext .wc-flag {
+  font-size: 12px;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
 #wc-overlay-root .wc-foot {
   display: block;
   color: rgba(255, 255, 255, 0.62);

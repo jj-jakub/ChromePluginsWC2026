@@ -5,7 +5,7 @@
 // host_permissions bypass page CORS.
 
 import { fetchEvents } from "./api.js";
-import { buildDeck } from "./wc-state.js";
+import { buildDeck, applyFavorites } from "./wc-state.js";
 import { nextDelay, classifyHealth } from "./backoff.js";
 import { ALARM, CACHE, MSG, SETTINGS, HEALTH } from "./config.js";
 
@@ -55,6 +55,24 @@ async function readHealth() {
 
 async function writeHealth(h) {
   await chrome.storage.local.set({ [HEALTH.STATE_KEY]: h });
+}
+
+/** The user's favorite nations (read fresh so a toggle re-ranks without a refetch). */
+async function readFavorites() {
+  try {
+    const got = await chrome.storage.sync.get(SETTINGS.KEY);
+    const f = got[SETTINGS.KEY]?.favorites;
+    return Array.isArray(f) ? f.filter((x) => typeof x === "string") : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+/** Overlay the user's favorites onto a base deck: tag isFavorite + pick the favorite-aware index. */
+async function decorate(baseState, now) {
+  const favorites = await readFavorites();
+  const { matches, index } = applyFavorites(baseState.matches, now, favorites, baseState.index);
+  return { matches, index, updatedAt: baseState.updatedAt };
 }
 
 /** The compact health summary the overlay renders (status + retry/last-success timing). */
@@ -119,17 +137,20 @@ async function refresh(force) {
  * gracefully. Every response carries a `health` summary for honest "provider down" copy.
  */
 async function getState(force) {
+  const now = Date.now();
   const cached = await readCache();
-  const fresh = !force && cached && Date.now() - cached.fetchedAt < ttlFor(cached.state);
-  if (fresh) return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, health: healthInfo(await readHealth(), Date.now()) };
+  const fresh = !force && cached && now - cached.fetchedAt < ttlFor(cached.state);
+  if (fresh) {
+    return { ok: true, state: await decorate(cached.state, now), fetchedAt: cached.fetchedAt, health: healthInfo(await readHealth(), now) };
+  }
 
   try {
     const entry = await refresh(force);
-    return { ok: true, state: entry.state, fetchedAt: entry.fetchedAt, health: healthInfo(await readHealth(), Date.now()) };
+    return { ok: true, state: await decorate(entry.state, now), fetchedAt: entry.fetchedAt, health: healthInfo(await readHealth(), now) };
   } catch (err) {
-    const health = healthInfo(await readHealth(), Date.now());
+    const health = healthInfo(await readHealth(), now);
     if (cached) {
-      return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, stale: true, health };
+      return { ok: true, state: await decorate(cached.state, now), fetchedAt: cached.fetchedAt, stale: true, health };
     }
     return { ok: false, error: String(err?.message || err), health };
   }

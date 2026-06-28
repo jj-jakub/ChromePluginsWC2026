@@ -15,9 +15,10 @@ creds on this machine, so push over SSH).
 - **worldcup-overlay** — a floating widget pinned to a **configurable corner of every page**
   showing FIFA World Cup 2026: the live match, else next fixture, else last result. Country flags,
   ‹ › arrows to rotate the whole match deck, a counter that jumps back to "current", a manual
-  ↻ refresh, and minimize-to-ball. Also ships a **toolbar popup** (same card on icon-click) and an
-  **options page** (corner, start-minimized, refresh interval; `chrome.storage.sync`). Confirmed
-  working in Chrome.
+  ↻ refresh, and minimize-to-ball. **Follow nations with the ★** — a favorite's match becomes the
+  default and gets a favorites-only filter + a "Your next" line. Also ships a **toolbar popup**
+  (same card on icon-click) and an **options page** (corner, start-minimized, refresh interval;
+  `chrome.storage.sync`). Confirmed working in Chrome.
 
 ## worldcup-overlay architecture
 Two worlds talking over one message, `WC_GET_STATE`:
@@ -25,9 +26,9 @@ Two worlds talking over one message, `WC_GET_STATE`:
 src/
   config.js          all tunables (API key/league/season, cache TTLs, alarm, live window, msg, settings mirror)
   ── background (ES modules, service worker type:module) ──
-  service-worker.js  fetch → buildDeck → cache → chrome.alarms (period from settings); backoff+health on failure; answers WC_GET_STATE
+  service-worker.js  fetch → buildDeck → cache → chrome.alarms (period from settings); backoff+health on failure; decorates with favorites per-request; answers WC_GET_STATE
   api.js             TheSportsDB client: fetch fixture window → sanitize → normalize → reconcile → WcEvent
-  wc-state.js        PURE: phaseOf / isLiveNow / matchModeOf / classify / buildDeck (no chrome/net)
+  wc-state.js        PURE: phaseOf / isLiveNow / matchModeOf / classify / buildDeck + favorites (applyFavorites/favoriteIndex/nextFavoriteFixture)
   sanitize.js        PURE: defensive coercion of raw provider rows (never throws); drops junk
   reconcile.js       PURE: dedupe duplicate ids across endpoints; most-progressed wins; lowConfidence flag
   backoff.js         PURE: nextDelay (capped exponential) + classifyHealth (ok|degraded|down)
@@ -41,7 +42,7 @@ src/
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
-test/                node --test (58 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff
+test/                node --test (70 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff
 ```
 
 ## Key decisions (this is why things are the way they are)

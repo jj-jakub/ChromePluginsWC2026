@@ -12,23 +12,39 @@
   const { esc, clock, dayLabel, until, ago } = WC.fmt;
   const flagOf = WC.flag;
 
-  function teamRow(name, score, win) {
+  const favKey = (s) => String(s || "").trim().toLowerCase();
+  const isFav = (name, favorites) => {
+    if (!favorites || !favorites.length) return false;
+    const k = favKey(name);
+    return favorites.some((f) => favKey(f) === k);
+  };
+
+  // Per-team follow ★ — toggles a favorite nation. Always shown (it's how you add favorites).
+  function star(name, fav) {
+    const label = (fav ? "Unfollow " : "Follow ") + name;
+    return `<button class="wc-star${fav ? " on" : ""}" data-team="${esc(name)}" title="${esc(label)}" aria-label="${esc(label)}" aria-pressed="${fav ? "true" : "false"}">★</button>`;
+  }
+
+  function teamRow(name, score, win, fav) {
     const flag = flagOf(name);
     return `<div class="wc-team${win ? " win" : ""}">
+        ${star(name, !!fav)}
         <span class="wc-name">${flag ? `<span class="wc-flag">${flag}</span>` : ""}${esc(name)}</span>
         <span class="wc-score">${score == null ? "" : esc(score)}</span>
       </div>`;
   }
 
-  function matchBody(m, now) {
+  function matchBody(m, now, favorites) {
     const ko = m.kickoffMs;
     const venue = m.venue ? `<span class="wc-sub">${esc(m.venue)}</span>` : "";
+    const fH = isFav(m.home, favorites);
+    const fA = isFav(m.away, favorites);
 
     if (m.matchMode === "live") {
       const prog = m.progress || m.status || "Live";
       return `
         <span class="wc-status live"><span class="wc-live-dot"></span>Live</span>
-        <div class="wc-teams">${teamRow(m.home, m.homeScore)}${teamRow(m.away, m.awayScore)}</div>
+        <div class="wc-teams">${teamRow(m.home, m.homeScore, false, fH)}${teamRow(m.away, m.awayScore, false, fA)}</div>
         <span class="wc-meta">${esc(prog)}${ko ? ` · ${esc(clock(ko))} kickoff` : ""}</span>
         ${venue}`;
     }
@@ -36,7 +52,7 @@
       const when = ko ? `${esc(dayLabel(ko, now))} ${esc(clock(ko))} · ${esc(until(ko, now))}` : "Scheduled";
       return `
         <span class="wc-status upcoming">Up next</span>
-        <div class="wc-teams">${teamRow(m.home, null)}${teamRow(m.away, null)}</div>
+        <div class="wc-teams">${teamRow(m.home, null, false, fH)}${teamRow(m.away, null, false, fA)}</div>
         <span class="wc-meta">${when}</span>
         ${venue}`;
     }
@@ -46,9 +62,27 @@
     const when = ko ? `${esc(dayLabel(ko, now))} · ${esc(clock(ko))}` : "Recently played";
     return `
       <span class="wc-status result">Full time</span>
-      <div class="wc-teams">${teamRow(m.home, hs, decided && hs > as)}${teamRow(m.away, as, decided && as > hs)}</div>
+      <div class="wc-teams">${teamRow(m.home, hs, decided && hs > as, fH)}${teamRow(m.away, as, decided && as > hs, fA)}</div>
       <span class="wc-meta">${when}</span>
       ${venue}`;
+  }
+
+  /** "Your next: <flag> Home v Away · in 2h" for the soonest live/upcoming favorite, else "". */
+  function nextFavoriteLine(deck, now) {
+    const cands = deck.filter(
+      (m) => m.isFavorite && (m.matchMode === "live" || (m.matchMode === "upcoming" && m.kickoffMs > now))
+    );
+    if (!cands.length) return "";
+    cands.sort((a, b) => {
+      const la = a.matchMode === "live" ? 0 : 1;
+      const lb = b.matchMode === "live" ? 0 : 1;
+      if (la !== lb) return la - lb;
+      return (a.kickoffMs || 0) - (b.kickoffMs || 0);
+    });
+    const m = cands[0];
+    const when = m.matchMode === "live" ? "now" : until(m.kickoffMs, now);
+    const fh = flagOf(m.home);
+    return `<div class="wc-yournext">Your next: ${fh ? `<span class="wc-flag">${fh}</span>` : ""}${esc(m.home)} v ${esc(m.away)} · ${esc(when)}</div>`;
   }
 
   /** "in 4m" / "in 1h 2m" / "shortly" — for the data-health retry copy. */
@@ -72,17 +106,23 @@
   /**
    * Full card markup.
    * @param {Object} model
-   * @param {WcEvent[]} model.deck      sorted matches (each with .matchMode)
+   * @param {WcEvent[]} model.deck      sorted matches to show (already filtered for favFilter)
    * @param {number?}   model.cursor    index of the match to show (clamped by the caller)
    * @param {number?}   model.fetchedAt epoch ms of the last successful fetch
    * @param {boolean}   model.stale     showing a cached/offline copy
    * @param {boolean}   model.refreshing manual refresh in progress (spinner)
    * @param {boolean}   model.loadError could not load any data
    * @param {Object?}   model.health    {status,nextRetryAt,lastSuccessMs} data-health summary
+   * @param {string[]}  model.favorites favorite nations (for the per-team ★ state)
+   * @param {boolean}   model.favFilter favorites-only filter is active
+   * @param {boolean}   model.canFilter the full deck has at least one favorite (show the filter btn)
    * @param {string}    model.icon      extension icon URL (chrome.runtime.getURL)
    */
   function card(model, now) {
-    const { deck = [], fetchedAt, stale, refreshing, loadError, health, icon = "" } = model || {};
+    const {
+      deck = [], fetchedAt, stale, refreshing, loadError, health,
+      favorites = [], favFilter = false, canFilter = false, icon = "",
+    } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
 
@@ -92,9 +132,11 @@
     if (loadError) {
       body = `<div class="wc-empty">Couldn't load World Cup data.</div>`;
     } else if (!deck.length) {
-      body = `<div class="wc-empty">No World Cup matches found right now.</div>`;
+      body = favFilter
+        ? `<div class="wc-empty">No favorite matches right now.</div>`
+        : `<div class="wc-empty">No World Cup matches found right now.</div>`;
     } else {
-      body = matchBody(deck[cursor], now);
+      body = matchBody(deck[cursor], now, favorites);
       if (deck.length > 1) {
         nav = `
           <div class="wc-nav">
@@ -105,6 +147,12 @@
       }
     }
 
+    const favBtn = canFilter
+      ? `<span class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</span>`
+      : "";
+
+    const yourNext = !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
+
     const foot = fetchedAt
       ? `<span class="wc-foot">Updated ${esc(ago(fetchedAt, now))}${stale ? " · offline" : ""} · TheSportsDB</span>`
       : "";
@@ -114,13 +162,14 @@
         <div class="wc-head">
           <span class="wc-dot"><img src="${icon}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
+          ${favBtn}
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
           <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
         </div>
         ${banner}
         <div class="wc-body">${body}</div>
         ${nav}
-        <div class="wc-foot-wrap">${foot}</div>
+        <div class="wc-foot-wrap">${yourNext}${foot}</div>
       </div>`;
   }
 

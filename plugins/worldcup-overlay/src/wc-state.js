@@ -93,3 +93,69 @@ export function buildDeck(events, now) {
 
   return { matches, primaryIndex };
 }
+
+// ---- favorites (pure; the favorites array is passed in from the SW, which owns chrome.storage) ----
+
+const favKey = (s) => String(s || "").trim().toLowerCase();
+
+/** Is this exact nation one of the user's favorites? */
+export function teamIsFavorite(team, favorites) {
+  if (!favorites || !favorites.length) return false;
+  const k = favKey(team);
+  return favorites.some((f) => favKey(f) === k);
+}
+
+/** Does either side of this match involve a favorite nation? */
+export function matchHasFavorite(m, favorites) {
+  return teamIsFavorite(m.home, favorites) || teamIsFavorite(m.away, favorites);
+}
+
+/**
+ * Index of the favorite match to feature, or -1 when no favorite is in the deck.
+ * Precedence: live favorite (soonest kickoff) > next favorite fixture (soonest) > most recent
+ * favorite result.
+ */
+export function favoriteIndex(matches, now, favorites) {
+  if (!favorites || !favorites.length) return -1;
+  const pickBest = (pred, better) => {
+    let best = -1;
+    matches.forEach((m, i) => {
+      if (!matchHasFavorite(m, favorites) || !pred(m)) return;
+      if (best < 0 || better(m, matches[best])) best = i;
+    });
+    return best;
+  };
+  const live = pickBest((m) => m.matchMode === "live", (a, b) => (a.kickoffMs || 0) < (b.kickoffMs || 0));
+  if (live >= 0) return live;
+  const up = pickBest((m) => m.matchMode === "upcoming" && m.kickoffMs > now, (a, b) => a.kickoffMs < b.kickoffMs);
+  if (up >= 0) return up;
+  return pickBest((m) => m.matchMode === "result", (a, b) => (a.kickoffMs || 0) > (b.kickoffMs || 0));
+}
+
+/**
+ * Tag every match with `isFavorite` and pick the favorite-aware primary index, falling back to
+ * the base classify index when no favorite is playing. Used by the SW to re-rank a cached deck
+ * per request, so toggling a favorite re-ranks instantly with no refetch.
+ * @returns {{ matches: WcEvent[], index: number }}
+ */
+export function applyFavorites(matches, now, favorites, baseIndex) {
+  const favs = favorites || [];
+  const tagged = (matches || []).map((m) => ({ ...m, isFavorite: matchHasFavorite(m, favs) }));
+  const fi = favoriteIndex(tagged, now, favs);
+  return { matches: tagged, index: fi >= 0 ? fi : Math.max(0, baseIndex || 0) };
+}
+
+/** The soonest live-or-upcoming favorite match (for a "Your next: ..." line), or null. */
+export function nextFavoriteFixture(matches, now, favorites) {
+  if (!favorites || !favorites.length) return null;
+  const cands = (matches || []).filter(
+    (m) => matchHasFavorite(m, favorites) && (m.matchMode === "live" || (m.matchMode === "upcoming" && m.kickoffMs > now))
+  );
+  cands.sort((a, b) => {
+    const la = a.matchMode === "live" ? 0 : 1;
+    const lb = b.matchMode === "live" ? 0 : 1;
+    if (la !== lb) return la - lb; // live first
+    return (a.kickoffMs || 0) - (b.kickoffMs || 0);
+  });
+  return cands[0] || null;
+}

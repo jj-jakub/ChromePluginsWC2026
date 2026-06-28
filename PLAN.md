@@ -22,12 +22,15 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
       `classifyHealth` ok|degraded|down); worker persists failures + `nextRetryAt` and honors the
       backoff window; `getState` returns a `health` summary; overlay shows a degraded/down banner.
 
-## Commit 3 — Engagement + real data
-- [ ] **Favorites (multi-team pin)** — ★ toggle; pure `primaryIndexFor`/`isFavorite`/`filterDeck`/
-      `nextFavoriteFixture` in `wc-state.js`; worker re-ranks per `GET_STATE`; favorites-only filter + footer.
+## Commit 3 — Engagement + real data (landing as focused sub-commits)
+- [x] **Favorites (multi-team pin)** — ★ on each team toggles a favorite (`chrome.storage.sync`);
+      pure `applyFavorites`/`favoriteIndex`/`teamIsFavorite`/`matchHasFavorite`/`nextFavoriteFixture`
+      in `wc-state.js`; worker `decorate`s the cached deck per `GET_STATE` (re-rank, no refetch);
+      favorites-only filter toggle + a "Your next" line; mirrored in the popup.
 - [ ] **Group standings** — pure `standings.js` (P/W/D/L/GF/GA/GD/Pts, FIFA tiebreakers, top-2 qualify);
       season-wide fetch routed through sanitize/reconcile; table-view toggle.
 - [ ] **Team form strip** — pure `form.js` (`teamForm` → W/D/L, GF/GA, last[]) under each team.
+- [ ] _Fast-follow:_ favorites management section on the options page (overlay/popup ★ covers it for now).
 
 ## Commit 4 — Match depth
 - [ ] **Per-match details** — `roundLabel(round, stage)` in `format.js` (Matchday N / Round of 16 / QF / SF / Final); chevron details strip.

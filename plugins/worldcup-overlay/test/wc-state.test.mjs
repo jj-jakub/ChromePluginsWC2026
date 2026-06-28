@@ -6,6 +6,10 @@ import {
   matchModeOf,
   classify,
   buildDeck,
+  teamIsFavorite,
+  matchHasFavorite,
+  applyFavorites,
+  nextFavoriteFixture,
 } from "../src/wc-state.js";
 
 const NOW = Date.UTC(2026, 5, 27, 12, 0, 0);
@@ -67,6 +71,59 @@ test("classify picks the soonest upcoming and the most recent result", () => {
   const old = ev({ id: "old", status: "FT", hs: 1, as: 0, ko: NOW - 10 * H });
   const recent = ev({ id: "recent", status: "FT", hs: 0, as: 0, ko: NOW - 2 * H });
   assert.equal(classify([old, recent], NOW).match.id, "recent");
+});
+
+test("teamIsFavorite matches case-insensitively and trims; empty/null favorites are false", () => {
+  assert.equal(teamIsFavorite("Brazil", ["brazil"]), true);
+  assert.equal(teamIsFavorite("brazil", [" Brazil "]), true);
+  assert.equal(teamIsFavorite("Brazil", ["Norway"]), false);
+  assert.equal(teamIsFavorite("Brazil", []), false);
+  assert.equal(teamIsFavorite("Brazil", null), false);
+});
+
+test("matchHasFavorite checks both sides", () => {
+  const m = { home: "Brazil", away: "Norway" };
+  assert.equal(matchHasFavorite(m, ["Norway"]), true);
+  assert.equal(matchHasFavorite(m, ["Brazil"]), true);
+  assert.equal(matchHasFavorite(m, ["Spain"]), false);
+});
+
+test("applyFavorites tags isFavorite and re-ranks to the favorite's match", () => {
+  const live = ev({ id: "L", status: "2H", ko: NOW - H, home: "Spain", away: "Italy" });
+  const up = ev({ id: "U", status: "NS", ko: NOW + 2 * H, home: "Brazil", away: "Norway" });
+  const done = ev({ id: "D", status: "FT", hs: 2, as: 1, ko: NOW - 5 * H, home: "France", away: "Peru" });
+  const { matches, primaryIndex } = buildDeck([up, done, live], NOW);
+  assert.equal(matches[primaryIndex].id, "L"); // base primary is the live (Spain) match
+
+  const out = applyFavorites(matches, NOW, ["Brazil"], primaryIndex);
+  assert.equal(out.matches[out.index].id, "U"); // re-ranked to Brazil's upcoming match
+  assert.equal(out.matches.find((m) => m.id === "U").isFavorite, true);
+  assert.equal(out.matches.find((m) => m.id === "L").isFavorite, false);
+});
+
+test("applyFavorites prefers a live favorite over an upcoming favorite", () => {
+  const liveFav = ev({ id: "LF", status: "2H", ko: NOW - H, home: "Brazil", away: "Italy" });
+  const upFav = ev({ id: "UF", status: "NS", ko: NOW + 2 * H, home: "Brazil", away: "Norway" });
+  const { matches, primaryIndex } = buildDeck([upFav, liveFav], NOW);
+  const out = applyFavorites(matches, NOW, ["Brazil"], primaryIndex);
+  assert.equal(out.matches[out.index].id, "LF");
+});
+
+test("applyFavorites falls back to the base index when no favorite is in the deck", () => {
+  const live = ev({ id: "L", status: "2H", ko: NOW - H, home: "Spain", away: "Italy" });
+  const up = ev({ id: "U", status: "NS", ko: NOW + 2 * H, home: "Brazil", away: "Norway" });
+  const { matches, primaryIndex } = buildDeck([up, live], NOW);
+  const out = applyFavorites(matches, NOW, ["Germany"], primaryIndex);
+  assert.equal(out.index, primaryIndex);
+  assert.equal(out.matches.every((m) => m.isFavorite === false), true);
+});
+
+test("nextFavoriteFixture returns the soonest favorite, live before upcoming", () => {
+  const live = ev({ id: "L", status: "2H", ko: NOW - H, home: "Brazil", away: "Italy" });
+  const soon = ev({ id: "S", status: "NS", ko: NOW + H, home: "Brazil", away: "Spain" });
+  const { matches } = buildDeck([soon, live], NOW);
+  assert.equal(nextFavoriteFixture(matches, NOW, ["Brazil"]).id, "L");
+  assert.equal(nextFavoriteFixture(matches, NOW, ["Germany"]), null);
 });
 
 test("buildDeck sorts chronologically, tags modes, points to the primary", () => {

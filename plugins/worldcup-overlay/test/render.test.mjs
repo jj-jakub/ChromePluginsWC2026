@@ -107,6 +107,45 @@ test("card shows a data-health banner when degraded/down, but not when ok", () =
   assert.match(down, /Retrying shortly/); // sub-minute retry rounds to "shortly"
 });
 
+test("teamRow renders a follow star, filled when favorite", () => {
+  const off = teamRow("Brazil", 1, false, false);
+  assert.match(off, /class="wc-star"/);
+  assert.doesNotMatch(off, /wc-star on/);
+  const on = teamRow("Brazil", 1, false, true);
+  assert.match(on, /class="wc-star on"/);
+  assert.match(on, /aria-pressed="true"/);
+});
+
+test("card stars the favorite side and shows the favorites filter when canFilter", () => {
+  const deck = [
+    { id: "a", home: "Brazil", away: "Norway", matchMode: "upcoming", kickoffMs: NOW + H, isFavorite: true },
+  ];
+  const html = card({ deck, cursor: 0, favorites: ["Brazil"], canFilter: true, icon: "i.png" }, NOW);
+  assert.match(html, /wc-favfilter/);
+  assert.match(html, /class="wc-star on" data-team="Brazil"/);
+  assert.match(html, /class="wc-star" data-team="Norway"/);
+});
+
+test("card omits the favorites filter when canFilter is false", () => {
+  const deck = [{ id: "a", home: "Brazil", away: "Norway", matchMode: "upcoming", kickoffMs: NOW + H }];
+  assert.doesNotMatch(card({ deck, cursor: 0, icon: "i.png" }, NOW), /wc-favfilter/);
+});
+
+test("card shows a 'Your next' line for an upcoming favorite", () => {
+  const deck = [
+    { id: "a", home: "Brazil", away: "Norway", matchMode: "upcoming", kickoffMs: NOW + 2 * H, isFavorite: true },
+  ];
+  const html = card({ deck, cursor: 0, favorites: ["Brazil"], icon: "i.png" }, NOW);
+  assert.match(html, /wc-yournext/);
+  assert.match(html, /Your next:/);
+  assert.match(html, /Brazil v Norway/);
+});
+
+test("card with favFilter on and an empty filtered deck shows favorites empty copy", () => {
+  const html = card({ deck: [], favFilter: true, canFilter: true, icon: "i.png" }, NOW);
+  assert.match(html, /No favorite matches/);
+});
+
 test("mini shows the live indicator only when a live match is in the deck", () => {
   assert.match(mini({ deck: [m({ matchMode: "live" })], icon: "i.png" }), /wc-mini-live/);
   assert.doesNotMatch(mini({ deck: [m({ matchMode: "upcoming" })], icon: "i.png" }), /wc-mini-live/);
