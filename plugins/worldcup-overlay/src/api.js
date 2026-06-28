@@ -53,7 +53,8 @@ export function normalizeEvent(ev) {
   return {
     id: ev.idEvent,
     league: ev.strLeague || "FIFA World Cup",
-    round: ev.intRound || ev.strStage || "",
+    round: ev.intRound || "",
+    stage: ev.strStage || "",
     group: ev.strGroup || "",
     venue: ev.strVenue || "",
     home: ev.strHomeTeam || "Home",

@@ -9,7 +9,7 @@
 
 (() => {
   const WC = (self.WC = self.WC || {});
-  const { esc, clock, dayLabel, until, ago } = WC.fmt;
+  const { esc, clock, dayLabel, until, ago, roundLabel, liveMinute } = WC.fmt;
   const flagOf = WC.flag;
 
   const favKey = (s) => String(s || "").trim().toLowerCase();
@@ -61,11 +61,17 @@
     const fH = isFav(m.home, favorites);
     const fA = isFav(m.away, favorites);
     const form = formStrip(m);
+    const rl = roundLabel(m.round, m.stage, m.group);
+    const round = rl ? `<span class="wc-round">${esc(rl)}</span>` : "";
 
     if (m.matchMode === "live") {
-      const prog = m.progress || m.status || "Live";
+      // prefer a real provider progress string; else an estimated "~67'" clock; else status.
+      const est = liveMinute(ko, now);
+      const estTxt = est ? `~${est}${est >= 90 ? "+" : ""}'` : "";
+      const prog = m.progress || estTxt || m.status || "Live";
       return `
         <span class="wc-status live"><span class="wc-live-dot"></span>Live</span>
+        ${round}
         <div class="wc-teams">${teamRow(m.home, m.homeScore, false, fH)}${teamRow(m.away, m.awayScore, false, fA)}</div>
         ${form}
         <span class="wc-meta">${esc(prog)}${ko ? ` · ${esc(clock(ko))} kickoff` : ""}</span>
@@ -75,6 +81,7 @@
       const when = ko ? `${esc(dayLabel(ko, now))} ${esc(clock(ko))} · ${esc(until(ko, now))}` : "Scheduled";
       return `
         <span class="wc-status upcoming">Up next</span>
+        ${round}
         <div class="wc-teams">${teamRow(m.home, null, false, fH)}${teamRow(m.away, null, false, fA)}</div>
         ${form}
         <span class="wc-meta">${when}</span>
@@ -86,6 +93,7 @@
     const when = ko ? `${esc(dayLabel(ko, now))} · ${esc(clock(ko))}` : "Recently played";
     return `
       <span class="wc-status result">Full time</span>
+      ${round}
       <div class="wc-teams">${teamRow(m.home, hs, decided && hs > as, fH)}${teamRow(m.away, as, decided && as > hs, fA)}</div>
       ${form}
       <span class="wc-meta">${when}</span>

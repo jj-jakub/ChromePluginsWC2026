@@ -51,5 +51,62 @@
     return `${Math.floor(h / 24)}d ago`;
   };
 
-  WC.fmt = { esc, clock, dayLabel, until, ago };
+  // Knockout stage strings TheSportsDB emits (lowercased), mapped to clean labels.
+  const KO_STAGES = {
+    final: "Final",
+    "grand final": "Final",
+    "third place": "Third-place play-off",
+    "3rd place": "Third-place play-off",
+    "third place final": "Third-place play-off",
+    "play-off for third place": "Third-place play-off",
+    "semi-final": "Semi-final",
+    "semi-finals": "Semi-final",
+    semifinal: "Semi-final",
+    semifinals: "Semi-final",
+    "quarter-final": "Quarter-final",
+    "quarter-finals": "Quarter-final",
+    quarterfinal: "Quarter-final",
+    quarterfinals: "Quarter-final",
+    "round of 16": "Round of 16",
+    "last 16": "Round of 16",
+    "1/8 finals": "Round of 16",
+    "round of 32": "Round of 32",
+    "1/16 finals": "Round of 32",
+  };
+
+  /**
+   * Human round/stage label from TheSportsDB's inconsistent intRound/strStage/strGroup.
+   * "Group A · Matchday 2" / "Round of 16" / "Quarter-final" / "Final". Defensive: unknown stage
+   * strings pass through trimmed; nothing usable -> "".
+   */
+  const roundLabel = (round, stage, group) => {
+    const s = String(stage || "").trim().toLowerCase();
+    if (KO_STAGES[s]) return KO_STAGES[s];
+
+    const g = String(group || "").trim();
+    const grp = g ? (/^group\b/i.test(g) ? g : `Group ${g}`) : "";
+    const n = Number(round);
+    const md = Number.isFinite(n) && n > 0 ? `Matchday ${n}` : "";
+
+    if (grp && md) return `${grp} · ${md}`;
+    if (grp) return grp;
+    if (md) return md;
+    return String(stage || "").trim(); // unknown stage passthrough, or ""
+  };
+
+  /**
+   * Estimated game clock for a live match from elapsed time since kickoff: 0–45 in the first half,
+   * a ~15-min half-time gap, then 45–90 capped (90 = "90+"). Returns null before kickoff / no
+   * kickoff. The caller prefixes "~" and yields to a real provider progress string when present.
+   */
+  const liveMinute = (kickoffMs, now) => {
+    if (!kickoffMs) return null;
+    const elapsed = Math.floor((now - kickoffMs) / 60000);
+    if (elapsed < 0) return null;
+    if (elapsed <= 45) return Math.max(1, elapsed); // first half
+    if (elapsed < 60) return 45; // ~ half-time
+    return Math.min(90, elapsed - 15); // second half, capped
+  };
+
+  WC.fmt = { esc, clock, dayLabel, until, ago, roundLabel, liveMinute };
 })();

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 // format.js is a classic content-script that attaches to `self.WC`. Shim `self`, then load it.
 globalThis.self = globalThis;
 await import(new URL("../src/format.js", import.meta.url));
-const { esc, until, ago, dayLabel } = globalThis.WC.fmt;
+const { esc, until, ago, dayLabel, roundLabel, liveMinute } = globalThis.WC.fmt;
 
 test("esc escapes HTML-significant characters", () => {
   assert.equal(esc(`<a href="x">A&B's</a>`), "&lt;a href=&quot;x&quot;&gt;A&amp;B&#39;s&lt;/a&gt;");
@@ -32,4 +32,27 @@ test("dayLabel names days relative to now", () => {
   assert.equal(dayLabel(noon, noon), "Today");
   assert.equal(dayLabel(noon + 86400000, noon), "Tomorrow");
   assert.equal(dayLabel(noon - 86400000, noon), "Yesterday");
+});
+
+test("roundLabel maps group/matchday and knockout stages defensively", () => {
+  assert.equal(roundLabel(2, "Group Stage", "Group A"), "Group A · Matchday 2");
+  assert.equal(roundLabel(1, "", "B"), "Group B · Matchday 1"); // bare group letter
+  assert.equal(roundLabel(3, "", ""), "Matchday 3");
+  assert.equal(roundLabel("", "Round of 16", ""), "Round of 16");
+  assert.equal(roundLabel("", "Quarter-Finals", ""), "Quarter-final");
+  assert.equal(roundLabel("", "Semi-Final", ""), "Semi-final");
+  assert.equal(roundLabel("", "Final", ""), "Final");
+  assert.equal(roundLabel("", "Some Future Stage", ""), "Some Future Stage"); // passthrough
+  assert.equal(roundLabel("", "", ""), "");
+});
+
+test("liveMinute estimates the game clock with an HT gap and a 90 cap", () => {
+  const ko = 1_000_000_000_000;
+  assert.equal(liveMinute(ko, ko + 10 * 60000), 10); // first half
+  assert.equal(liveMinute(ko, ko + 45 * 60000), 45);
+  assert.equal(liveMinute(ko, ko + 50 * 60000), 45); // ~half-time
+  assert.equal(liveMinute(ko, ko + 70 * 60000), 55); // second half: 70 - 15 HT
+  assert.equal(liveMinute(ko, ko + 200 * 60000), 90); // capped
+  assert.equal(liveMinute(ko, ko - 60000), null); // before kickoff
+  assert.equal(liveMinute(null, ko), null);
 });

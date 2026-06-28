@@ -20,6 +20,9 @@ const m = (o) => ({
   status: o.status || "",
   progress: o.progress || "",
   venue: o.venue || "",
+  round: o.round ?? "",
+  stage: o.stage ?? "",
+  group: o.group ?? "",
   matchMode: o.matchMode,
   kickoffMs: o.ko ?? NOW,
 });
@@ -144,6 +147,23 @@ test("card shows a 'Your next' line for an upcoming favorite", () => {
 test("card with favFilter on and an empty filtered deck shows favorites empty copy", () => {
   const html = card({ deck: [], favFilter: true, canFilter: true, icon: "i.png" }, NOW);
   assert.match(html, /No favorite matches/);
+});
+
+test("matchBody shows a round/stage caption from round/stage/group", () => {
+  const upcoming = matchBody(m({ matchMode: "upcoming", ko: NOW + H, round: 2, group: "Group A" }), NOW, []);
+  assert.match(upcoming, /wc-round/);
+  assert.match(upcoming, /Group A · Matchday 2/);
+  const ko = matchBody(m({ matchMode: "result", hs: 1, as: 0, ko: NOW - H, stage: "Quarter-Finals" }), NOW, []);
+  assert.match(ko, /Quarter-final/);
+});
+
+test("matchBody shows an estimated live minute when there's no provider progress", () => {
+  const live = matchBody(m({ matchMode: "live", hs: 0, as: 0, ko: NOW - 20 * 60000 }), NOW, []);
+  assert.match(live, /~20/); // "~20'" with the apostrophe HTML-escaped
+  // a real provider progress string wins over the estimate
+  const withProg = matchBody(m({ matchMode: "live", hs: 0, as: 0, ko: NOW - 20 * 60000, progress: "2H 63'" }), NOW, []);
+  assert.match(withProg, /2H 63/);
+  assert.doesNotMatch(withProg, /~/);
 });
 
 test("matchBody renders a recent-form strip when form data is attached", () => {
