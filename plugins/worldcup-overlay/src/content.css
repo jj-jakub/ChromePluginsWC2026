@@ -91,6 +91,23 @@
   to { transform: rotate(360deg); }
 }
 
+/* data-health banner (degraded = amber, down = red), shown under the header when the provider
+   is slow/unreachable. Explicit colors — all:initial strips inheritance. */
+#wc-overlay-root .wc-health {
+  display: block;
+  padding: 7px 13px;
+  color: #fff7e6;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  background: rgba(180, 120, 10, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+#wc-overlay-root .wc-health-down {
+  color: #ffe9e6;
+  background: rgba(150, 30, 30, 0.55);
+}
+
 #wc-overlay-root .wc-body { display: block; padding: 12px 13px 10px; }
 
 /* status pill — dark translucent base so white text always reads; live is solid red */

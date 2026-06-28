@@ -7,6 +7,8 @@
 
 import { API_BASE, THESPORTSDB } from "./config.js";
 import { phaseOf } from "./wc-state.js";
+import { sanitizeEvents } from "./sanitize.js";
+import { reconcile } from "./reconcile.js";
 
 const DAY_MS = 86400000;
 
@@ -74,13 +76,14 @@ const endpoints = {
 
 async function eventsFrom(url) {
   const data = await getJSON(url);
-  return data.events || [];
+  return sanitizeEvents(data && data.events); // bound + clean + drop junk rows; never throws
 }
 
 /**
  * Pull a window of events around "now" (yesterday/today/tomorrow UTC, to cover timezone edges)
- * plus the league's next/past endpoints as a safety net. Deduped by event id and normalized.
- * Per-request failures are tolerated — a partial result is better than none.
+ * plus the league's next/past endpoints as a safety net. Per-request failures are tolerated — a
+ * partial result is better than none. Records are sanitized, normalized, then reconciled across
+ * endpoints (most-progressed record per id wins; disagreements flagged low-confidence).
  * @returns {Promise<WcEvent[]>}
  */
 export async function fetchEvents(now = Date.now()) {
@@ -89,14 +92,10 @@ export async function fetchEvents(now = Date.now()) {
 
   const results = await Promise.allSettled(urls.map(eventsFrom));
 
-  const byId = new Map();
+  const all = [];
   for (const r of results) {
     if (r.status !== "fulfilled") continue;
-    for (const raw of r.value) {
-      if (raw && raw.idEvent && !byId.has(raw.idEvent)) {
-        byId.set(raw.idEvent, normalizeEvent(raw));
-      }
-    }
+    for (const raw of r.value) all.push(normalizeEvent(raw));
   }
-  return [...byId.values()];
+  return reconcile(all);
 }

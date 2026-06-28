@@ -6,7 +6,8 @@
 
 import { fetchEvents } from "./api.js";
 import { buildDeck } from "./wc-state.js";
-import { ALARM, CACHE, MSG, SETTINGS } from "./config.js";
+import { nextDelay, classifyHealth } from "./backoff.js";
+import { ALARM, CACHE, MSG, SETTINGS, HEALTH } from "./config.js";
 
 /**
  * @typedef {Object} WcState   What the overlay renders.
@@ -33,15 +34,57 @@ async function writeCache(entry) {
   await chrome.storage.local.set({ [CACHE.KEY]: entry });
 }
 
-/** Fetch + classify into a fresh state, persisting it. De-duped across concurrent callers. */
-async function refresh() {
+// --- fetch health (persisted so it survives service-worker termination) ---
+const DEFAULT_HEALTH = { failures: 0, lastSuccessMs: null, nextRetryAt: 0 };
+
+async function readHealth() {
+  const got = await chrome.storage.local.get(HEALTH.STATE_KEY);
+  return got[HEALTH.STATE_KEY] || { ...DEFAULT_HEALTH };
+}
+
+async function writeHealth(h) {
+  await chrome.storage.local.set({ [HEALTH.STATE_KEY]: h });
+}
+
+/** The compact health summary the overlay renders (status + retry/last-success timing). */
+function healthInfo(h, now) {
+  return {
+    status: classifyHealth({ lastSuccessMs: h.lastSuccessMs, failures: h.failures, now }, HEALTH),
+    failures: h.failures,
+    lastSuccessMs: h.lastSuccessMs,
+    nextRetryAt: h.nextRetryAt,
+  };
+}
+
+/**
+ * Fetch + classify into a fresh state, persisting it. De-duped across concurrent callers.
+ * Honors the backoff window (skips the network while `now < nextRetryAt`) unless `force`d.
+ * Updates the persisted health counter on success/failure.
+ */
+async function refresh(force) {
   if (inFlight) return inFlight;
   inFlight = (async () => {
     const now = Date.now();
-    const { matches, primaryIndex } = buildDeck(await fetchEvents(now), now);
-    const entry = { state: { matches, index: primaryIndex, updatedAt: now }, fetchedAt: now };
-    await writeCache(entry);
-    return entry;
+    const health = await readHealth();
+    if (!force && health.nextRetryAt && now < health.nextRetryAt) {
+      const err = new Error("backoff: waiting until next retry window");
+      err.backoff = true;
+      throw err;
+    }
+    try {
+      const { matches, primaryIndex } = buildDeck(await fetchEvents(now), now);
+      const entry = { state: { matches, index: primaryIndex, updatedAt: now }, fetchedAt: now };
+      await writeCache(entry);
+      await writeHealth({ failures: 0, lastSuccessMs: now, nextRetryAt: 0 });
+      return entry;
+    } catch (err) {
+      if (!err?.backoff) {
+        const failures = health.failures + 1;
+        const delay = nextDelay(failures, HEALTH.BASE_BACKOFF_MS, HEALTH.MAX_BACKOFF_MS);
+        await writeHealth({ failures, lastSuccessMs: health.lastSuccessMs, nextRetryAt: now + delay });
+      }
+      throw err;
+    }
   })();
   try {
     return await inFlight;
@@ -51,22 +94,24 @@ async function refresh() {
 }
 
 /**
- * Return fresh-enough cache, else refetch. `force` skips the cache (manual refresh button).
- * On fetch failure, fall back to stale cache so the overlay degrades gracefully.
+ * Return fresh-enough cache, else refetch. `force` skips both the cache and the backoff window
+ * (manual refresh button). On fetch failure, fall back to stale cache so the overlay degrades
+ * gracefully. Every response carries a `health` summary for honest "provider down" copy.
  */
 async function getState(force) {
   const cached = await readCache();
   const fresh = !force && cached && Date.now() - cached.fetchedAt < ttlFor(cached.state);
-  if (fresh) return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt };
+  if (fresh) return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, health: healthInfo(await readHealth(), Date.now()) };
 
   try {
-    const entry = await refresh();
-    return { ok: true, state: entry.state, fetchedAt: entry.fetchedAt };
+    const entry = await refresh(force);
+    return { ok: true, state: entry.state, fetchedAt: entry.fetchedAt, health: healthInfo(await readHealth(), Date.now()) };
   } catch (err) {
+    const health = healthInfo(await readHealth(), Date.now());
     if (cached) {
-      return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, stale: true };
+      return { ok: true, state: cached.state, fetchedAt: cached.fetchedAt, stale: true, health };
     }
-    return { ok: false, error: String(err?.message || err) };
+    return { ok: false, error: String(err?.message || err), health };
   }
 }
 

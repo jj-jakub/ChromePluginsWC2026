@@ -16,12 +16,13 @@
   let stale = false;
   let loadError = false;
   let refreshing = false;
+  let health = null;
 
   function render() {
     const now = Date.now();
     if (deck.length && (cursor == null || cursor >= deck.length)) cursor = primaryIndex;
     root.innerHTML = WC.render.card(
-      { deck, cursor, fetchedAt, stale, refreshing, loadError, icon: ICON },
+      { deck, cursor, fetchedAt, stale, refreshing, loadError, health, icon: ICON },
       now
     );
     root.querySelectorAll(".wc-arrow").forEach((b) =>
@@ -60,6 +61,7 @@
     try {
       chrome.runtime.sendMessage({ type: MSG_GET_STATE, force: !!force }, (resp) => {
         refreshing = false;
+        health = (resp && resp.health) || null;
         if (chrome.runtime.lastError || !resp || !resp.ok) {
           loadError = true;
           render();

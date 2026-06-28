@@ -51,6 +51,24 @@
       ${venue}`;
   }
 
+  /** "in 4m" / "in 1h 2m" / "shortly" — for the data-health retry copy. */
+  function retryPhrase(nextRetryAt, now) {
+    if (!nextRetryAt || nextRetryAt <= now) return "shortly";
+    const u = until(nextRetryAt, now);
+    return u === "kicking off" ? "shortly" : u;
+  }
+
+  /** A degraded/down banner, or "" when data is healthy. health: {status,nextRetryAt,lastSuccessMs}.
+   *  All text here is static or derived from safe fmt output, so only the status class is escaped. */
+  function healthBanner(health, now) {
+    if (!health || health.status === "ok") return "";
+    const status = health.status === "down" ? "down" : "degraded";
+    const lead = status === "down" ? "Can't reach live data." : "Live data delayed.";
+    const retry = `Retrying ${retryPhrase(health.nextRetryAt, now)}.`;
+    const last = health.lastSuccessMs ? ` Last update ${ago(health.lastSuccessMs, now)}.` : "";
+    return `<div class="wc-health wc-health-${status}">${lead} ${retry}${last}</div>`;
+  }
+
   /**
    * Full card markup.
    * @param {Object} model
@@ -60,17 +78,19 @@
    * @param {boolean}   model.stale     showing a cached/offline copy
    * @param {boolean}   model.refreshing manual refresh in progress (spinner)
    * @param {boolean}   model.loadError could not load any data
+   * @param {Object?}   model.health    {status,nextRetryAt,lastSuccessMs} data-health summary
    * @param {string}    model.icon      extension icon URL (chrome.runtime.getURL)
    */
   function card(model, now) {
-    const { deck = [], fetchedAt, stale, refreshing, loadError, icon = "" } = model || {};
+    const { deck = [], fetchedAt, stale, refreshing, loadError, health, icon = "" } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
 
+    const banner = healthBanner(health, now);
     let body;
     let nav = "";
     if (loadError) {
-      body = `<div class="wc-empty">Couldn't load World Cup data. It'll retry shortly.</div>`;
+      body = `<div class="wc-empty">Couldn't load World Cup data.</div>`;
     } else if (!deck.length) {
       body = `<div class="wc-empty">No World Cup matches found right now.</div>`;
     } else {
@@ -97,6 +117,7 @@
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
           <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
         </div>
+        ${banner}
         <div class="wc-body">${body}</div>
         ${nav}
         <div class="wc-foot-wrap">${foot}</div>

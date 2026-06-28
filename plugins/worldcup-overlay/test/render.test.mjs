@@ -88,6 +88,25 @@ test("card footer reflects fetchedAt and the offline flag", () => {
   assert.match(html, /TheSportsDB/);
 });
 
+test("card shows a data-health banner when degraded/down, but not when ok", () => {
+  const base = { deck: [m({ matchMode: "live" })], cursor: 0, icon: "i.png" };
+  assert.doesNotMatch(card({ ...base, health: { status: "ok" } }, NOW), /wc-health/);
+
+  const deg = card(
+    { ...base, health: { status: "degraded", nextRetryAt: NOW + 4 * 60000, lastSuccessMs: NOW - 12 * 60000 } },
+    NOW
+  );
+  assert.match(deg, /wc-health wc-health-degraded/);
+  assert.match(deg, /Live data delayed/);
+  assert.match(deg, /Retrying in 4m/);
+  assert.match(deg, /Last update 12m ago/);
+
+  const down = card({ ...base, health: { status: "down", nextRetryAt: NOW + 30000 } }, NOW);
+  assert.match(down, /wc-health-down/);
+  assert.match(down, /Can't reach live data/);
+  assert.match(down, /Retrying shortly/); // sub-minute retry rounds to "shortly"
+});
+
 test("mini shows the live indicator only when a live match is in the deck", () => {
   assert.match(mini({ deck: [m({ matchMode: "live" })], icon: "i.png" }), /wc-mini-live/);
   assert.doesNotMatch(mini({ deck: [m({ matchMode: "upcoming" })], icon: "i.png" }), /wc-mini-live/);

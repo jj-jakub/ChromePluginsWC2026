@@ -45,6 +45,19 @@ export const SETTINGS = {
   REFRESH_MAX_MINUTES: 30, // settings.js: REFRESH_MAX
 };
 
+/**
+ * Fetch-failure backoff + health thresholds (see backoff.js). On repeated failures the worker
+ * waits a capped-exponential delay before retrying instead of hammering the provider, and reports
+ * ok / degraded / down so the overlay can show honest copy.
+ */
+export const HEALTH = {
+  STATE_KEY: "wc_health",
+  BASE_BACKOFF_MS: 60 * 1000, // first retry ~1 min after a failure
+  MAX_BACKOFF_MS: 30 * 60 * 1000, // capped at 30 min
+  DOWN_FAILURES: 4, // this many in a row => "down"
+  DOWN_AGE_MS: 20 * 60 * 1000, // or no successful fetch for 20 min => "down"
+};
+
 /** Message protocol between content scripts and the service worker. content: "WC_GET_STATE". */
 export const MSG = {
   GET_STATE: "WC_GET_STATE",

@@ -16,10 +16,11 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
       (`card`/`mini`/`matchBody`), reused by a new `action.default_popup` page. `render.test.mjs`.
 
 ## Commit 2 — Data integrity & resilience
-- [ ] **Robust parsing** — `sanitize.js` (defensive per-record coercion, never throws) + `reconcile.js`
-      (merge duplicate `idEvent` across endpoints; most-progressed wins; low-confidence flag).
-- [ ] **Backoff / health / provider-down** — `backoff.js` (`nextDelay` capped exponential,
-      `classifyHealth` ok|degraded|down); worker persists failures + `nextRetryAt`; precise degraded copy.
+- [x] **Robust parsing** — `sanitize.js` (defensive per-record coercion, never throws) + `reconcile.js`
+      (merge duplicate `idEvent` across endpoints; most-progressed wins; low-confidence flag). Routed through `api.js`.
+- [x] **Backoff / health / provider-down** — `backoff.js` (`nextDelay` capped exponential,
+      `classifyHealth` ok|degraded|down); worker persists failures + `nextRetryAt` and honors the
+      backoff window; `getState` returns a `health` summary; overlay shows a degraded/down banner.
 
 ## Commit 3 — Engagement + real data
 - [ ] **Favorites (multi-team pin)** — ★ toggle; pure `primaryIndexFor`/`isFavorite`/`filterDeck`/
