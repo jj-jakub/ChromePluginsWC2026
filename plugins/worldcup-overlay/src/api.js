@@ -54,6 +54,7 @@ export function normalizeEvent(ev) {
     id: ev.idEvent,
     league: ev.strLeague || "FIFA World Cup",
     round: ev.intRound || ev.strStage || "",
+    group: ev.strGroup || "",
     venue: ev.strVenue || "",
     home: ev.strHomeTeam || "Home",
     away: ev.strAwayTeam || "Away",
@@ -72,6 +73,7 @@ const endpoints = {
   day: (dateStr) => `${API_BASE}/eventsday.php?d=${dateStr}&l=${THESPORTSDB.LEAGUE_ID}`,
   next: () => `${API_BASE}/eventsnextleague.php?id=${THESPORTSDB.LEAGUE_ID}`,
   past: () => `${API_BASE}/eventspastleague.php?id=${THESPORTSDB.LEAGUE_ID}`,
+  season: () => `${API_BASE}/eventsseason.php?id=${THESPORTSDB.LEAGUE_ID}&s=${THESPORTSDB.SEASON}`,
 };
 
 async function eventsFrom(url) {
@@ -97,5 +99,16 @@ export async function fetchEvents(now = Date.now()) {
     if (r.status !== "fulfilled") continue;
     for (const raw of r.value) all.push(normalizeEvent(raw));
   }
+  return reconcile(all);
+}
+
+/**
+ * Pull the whole season's events (for group standings — the 3-day window in fetchEvents is too
+ * small). Sanitized, normalized, reconciled. Retains `group` on each event.
+ * @returns {Promise<WcEvent[]>}
+ */
+export async function fetchSeason() {
+  const data = await getJSON(endpoints.season());
+  const all = sanitizeEvents(data && data.events).map(normalizeEvent);
   return reconcile(all);
 }

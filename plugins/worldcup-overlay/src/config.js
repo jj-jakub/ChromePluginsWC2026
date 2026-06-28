@@ -28,6 +28,12 @@ export const CACHE = {
   TTL_IDLE_MS: 5 * 60 * 1000,
 };
 
+/** Season-wide events cache (for group standings). Standings change slowly, so a long TTL. */
+export const SEASON = {
+  CACHE_KEY: "wc_season_cache",
+  TTL_MS: 30 * 60 * 1000,
+};
+
 /** Background refresh alarm (chrome.alarms). PERIOD_MIN is the default when no user override. */
 export const ALARM = {
   NAME: "wc-refresh",
@@ -58,7 +64,11 @@ export const HEALTH = {
   DOWN_AGE_MS: 20 * 60 * 1000, // or no successful fetch for 20 min => "down"
 };
 
-/** Message protocol between content scripts and the service worker. content: "WC_GET_STATE". */
+/**
+ * Message protocol between content scripts and the service worker.
+ * content: "WC_GET_STATE" / "WC_GET_STANDINGS" (duplicated in content.js/popup.js — keep in sync).
+ */
 export const MSG = {
   GET_STATE: "WC_GET_STATE",
+  GET_STANDINGS: "WC_GET_STANDINGS",
 };

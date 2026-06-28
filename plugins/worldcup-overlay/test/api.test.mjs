@@ -42,6 +42,12 @@ test("normalizeEvent maps the provider shape to a WcEvent", () => {
   assert.equal(m.kickoffMs, Date.UTC(2026, 5, 26, 19));
 });
 
+test("normalizeEvent retains the group (for standings)", () => {
+  const m = normalizeEvent({ idEvent: "1", strHomeTeam: "A", strAwayTeam: "B", strGroup: "Group C" });
+  assert.equal(m.group, "Group C");
+  assert.equal(normalizeEvent({ idEvent: "2", strHomeTeam: "A", strAwayTeam: "B" }).group, "");
+});
+
 test("normalizeEvent leaves missing scores as null", () => {
   const m = normalizeEvent({ idEvent: "2", strStatus: "NS", intHomeScore: "", intAwayScore: null });
   assert.equal(m.homeScore, null);

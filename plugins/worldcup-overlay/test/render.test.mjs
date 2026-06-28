@@ -146,6 +146,48 @@ test("card with favFilter on and an empty filtered deck shows favorites empty co
   assert.match(html, /No favorite matches/);
 });
 
+test("card in table mode renders the standings and hides the match nav", () => {
+  const standings = {
+    group: "Group A",
+    rows: [
+      { team: "Brazil", played: 3, win: 3, draw: 0, loss: 0, gf: 7, ga: 1, gd: 6, points: 9, qualifying: true },
+      { team: "Spain", played: 3, win: 2, draw: 0, loss: 1, gf: 4, ga: 2, gd: 2, points: 6, qualifying: true },
+      { team: "Norway", played: 3, win: 1, draw: 0, loss: 2, gf: 2, ga: 4, gd: -2, points: 3, qualifying: false },
+      { team: "Peru", played: 3, win: 0, draw: 0, loss: 3, gf: 0, ga: 6, gd: -6, points: 0, qualifying: false },
+    ],
+    partial: false,
+  };
+  const html = card({ mode: "table", standings, canTable: true, icon: "i.png" }, NOW);
+  assert.match(html, /wc-table/);
+  assert.match(html, /Group A/);
+  assert.match(html, /Brazil/);
+  assert.match(html, /wc-trow q/); // qualifying rows highlighted
+  assert.match(html, /wc-tabletoggle on/);
+  assert.doesNotMatch(html, /wc-nav/); // no match-rotation nav in table mode
+});
+
+test("card table mode shows loading and a partial note", () => {
+  assert.match(
+    card({ mode: "table", standings: { group: "Group A", loading: true }, canTable: true, icon: "i" }, NOW),
+    /Loading group table/
+  );
+  const partial = card(
+    {
+      mode: "table",
+      standings: { group: "Group A", rows: [{ team: "A", played: 1, win: 1, draw: 0, loss: 0, gf: 1, ga: 0, gd: 1, points: 3, qualifying: true }], partial: true },
+      canTable: true,
+      icon: "i",
+    },
+    NOW
+  );
+  assert.match(partial, /Partial table/);
+});
+
+test("card shows the table toggle only when canTable", () => {
+  assert.match(card({ deck: [m({ matchMode: "live" })], cursor: 0, canTable: true, icon: "i" }, NOW), /wc-tabletoggle/);
+  assert.doesNotMatch(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-tabletoggle/);
+});
+
 test("mini shows the live indicator only when a live match is in the deck", () => {
   assert.match(mini({ deck: [m({ matchMode: "live" })], icon: "i.png" }), /wc-mini-live/);
   assert.doesNotMatch(mini({ deck: [m({ matchMode: "upcoming" })], icon: "i.png" }), /wc-mini-live/);

@@ -14,8 +14,9 @@
   if (!document.body && !document.documentElement) return;
   if (document.getElementById(ROOT_ID)) return; // SPA re-run guard
 
-  // --- constants (content-side; MSG must match config.js MSG.GET_STATE) ---
+  // --- constants (content-side; MSG must match config.js MSG.*) ---
   const MSG_GET_STATE = "WC_GET_STATE";
+  const MSG_GET_STANDINGS = "WC_GET_STANDINGS";
   const UI_KEY = "wc_ui";
   const ICON = chrome.runtime.getURL("icons/icon48.png");
   const POLL_MS = 60 * 1000; // re-ask the worker for state
@@ -37,6 +38,9 @@
   let health = null;
   let settings = settingsApi.DEFAULTS;
   let favFilter = false; // show favorites-only when on
+  let tableMode = false; // showing the group standings table instead of the match
+  let tableGroup = ""; // the group currently shown in the table
+  let standings = null; // { group, rows, partial, loading, error }
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -63,6 +67,18 @@
     return i >= 0 ? i : 0;
   }
 
+  // The currently-featured match, and its group (for the standings toggle).
+  function currentMatch() {
+    const vd = viewDeck();
+    if (!vd.length) return null;
+    const i = cursor != null && cursor < vd.length ? cursor : clampPrimaryToView(vd);
+    return vd[i] || null;
+  }
+  function currentGroup() {
+    const m = currentMatch();
+    return m && m.group ? m.group : "";
+  }
+
   // ---- render + wire events ----
   function render() {
     const now = Date.now();
@@ -79,14 +95,18 @@
     root.innerHTML = WC.render.card(
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
-        favorites: settings.favorites, favFilter, canFilter, icon: ICON,
+        favorites: settings.favorites, favFilter, canFilter,
+        mode: tableMode ? "table" : "match", standings, canTable: tableMode || !!currentGroup(),
+        icon: ICON,
       },
       now
     );
 
     root.querySelector(".wc-min").addEventListener("click", () => setMinimized(true));
     root.querySelector(".wc-refresh").addEventListener("click", () => {
-      if (!refreshing) requestState(true);
+      if (refreshing) return;
+      if (tableMode) requestStandings(tableGroup, true);
+      else requestState(true);
     });
     root.querySelectorAll(".wc-arrow").forEach((b) =>
       b.addEventListener("click", () => rotate(Number(b.dataset.dir)))
@@ -101,6 +121,8 @@
     );
     const favBtn = root.querySelector(".wc-favfilter");
     if (favBtn) favBtn.addEventListener("click", () => toggleFavFilter());
+    const tableBtn = root.querySelector(".wc-tabletoggle");
+    if (tableBtn) tableBtn.addEventListener("click", () => toggleTable());
   }
 
   // ---- actions ----
@@ -133,6 +155,43 @@
     try {
       chrome.storage.sync.set({ [SETTINGS_KEY]: settingsApi.normalize({ ...settings, favorites: favs }) });
     } catch (_) {}
+  }
+
+  function toggleTable() {
+    if (tableMode) {
+      tableMode = false;
+      standings = null;
+      render();
+      return;
+    }
+    const group = currentGroup();
+    if (!group) return;
+    tableMode = true;
+    tableGroup = group;
+    standings = { group, loading: true };
+    render();
+    requestStandings(group);
+  }
+
+  function requestStandings(group, force) {
+    if (!contextAlive()) {
+      stopLoops();
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage({ type: MSG_GET_STANDINGS, group, force: !!force }, (resp) => {
+        if (!tableMode || group !== tableGroup) return; // user already switched away
+        if (chrome.runtime.lastError || !resp) {
+          standings = { group, error: true, rows: [] };
+        } else {
+          standings = resp;
+        }
+        render();
+      });
+    } catch (_) {
+      standings = { group, error: true, rows: [] };
+      render();
+    }
   }
 
   function setMinimized(v) {

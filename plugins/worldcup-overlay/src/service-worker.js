@@ -4,10 +4,11 @@
 // a chrome.alarms timer, and answers MSG.GET_STATE from content scripts. Network runs here so
 // host_permissions bypass page CORS.
 
-import { fetchEvents } from "./api.js";
+import { fetchEvents, fetchSeason } from "./api.js";
 import { buildDeck, applyFavorites } from "./wc-state.js";
+import { tableFor } from "./standings.js";
 import { nextDelay, classifyHealth } from "./backoff.js";
-import { ALARM, CACHE, MSG, SETTINGS, HEALTH } from "./config.js";
+import { ALARM, CACHE, SEASON, MSG, SETTINGS, HEALTH } from "./config.js";
 
 /**
  * @typedef {Object} WcState   What the overlay renders.
@@ -73,6 +74,38 @@ async function decorate(baseState, now) {
   const favorites = await readFavorites();
   const { matches, index } = applyFavorites(baseState.matches, now, favorites, baseState.index);
   return { matches, index, updatedAt: baseState.updatedAt };
+}
+
+// --- season events + group standings (lazy: only fetched when the user opens the table) ---
+async function readSeasonCache() {
+  try {
+    const got = await chrome.storage.local.get(SEASON.CACHE_KEY);
+    return got[SEASON.CACHE_KEY] || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getSeasonEvents(force) {
+  const cached = await readSeasonCache();
+  if (!force && cached && Date.now() - cached.fetchedAt < SEASON.TTL_MS) return cached.events;
+  try {
+    const events = await fetchSeason();
+    try {
+      await chrome.storage.local.set({ [SEASON.CACHE_KEY]: { events, fetchedAt: Date.now() } });
+    } catch (_) {}
+    return events;
+  } catch (_) {
+    return cached ? cached.events : null; // null => couldn't load and no cache
+  }
+}
+
+/** Group standings for one group, computed from cached season results. */
+async function getStandings(group, force) {
+  const events = await getSeasonEvents(force);
+  if (!events) return { ok: false, group, rows: [], error: "season unavailable" };
+  const { rows, partial, complete } = tableFor(events, group);
+  return { ok: true, group, rows, partial, complete };
 }
 
 /** The compact health summary the overlay renders (status + retry/last-success timing). */
@@ -164,6 +197,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       .then(sendResponse)
       .catch((e) => sendResponse({ ok: false, error: String(e?.message || e), health: null }));
     return true; // keep the channel open for the async response
+  }
+  if (msg?.type === MSG.GET_STANDINGS) {
+    getStandings(msg.group, msg.force)
+      .then(sendResponse)
+      .catch((e) => sendResponse({ ok: false, group: msg.group, rows: [], error: String(e?.message || e) }));
+    return true;
   }
   return false;
 });

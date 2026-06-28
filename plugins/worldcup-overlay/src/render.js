@@ -85,6 +85,36 @@
     return `<div class="wc-yournext">Your next: ${fh ? `<span class="wc-flag">${fh}</span>` : ""}${esc(m.home)} v ${esc(m.away)} · ${esc(when)}</div>`;
   }
 
+  /** Group standings table body. standings: { group, rows, partial, loading, error }. */
+  function standingsBody(standings) {
+    if (!standings || standings.loading) return `<div class="wc-empty">Loading group table…</div>`;
+    if (standings.error || !standings.rows || !standings.rows.length) {
+      return `<div class="wc-empty">Group table not available yet.</div>`;
+    }
+    const head = `<div class="wc-trow wc-thead">
+        <span class="wc-tpos"></span>
+        <span class="wc-tteam">${esc(standings.group || "Group")}</span>
+        <span class="wc-tnum">P</span>
+        <span class="wc-tnum">GD</span>
+        <span class="wc-tnum">Pts</span>
+      </div>`;
+    const rows = standings.rows
+      .map((r, i) => {
+        const flag = flagOf(r.team);
+        const gd = `${r.gd > 0 ? "+" : ""}${r.gd}`;
+        return `<div class="wc-trow${r.qualifying ? " q" : ""}">
+        <span class="wc-tpos">${i + 1}</span>
+        <span class="wc-tteam">${flag ? `<span class="wc-flag">${flag}</span>` : ""}${esc(r.team)}</span>
+        <span class="wc-tnum">${esc(r.played)}</span>
+        <span class="wc-tnum">${esc(gd)}</span>
+        <span class="wc-tnum wc-tpts">${esc(r.points)}</span>
+      </div>`;
+      })
+      .join("");
+    const note = standings.partial ? `<div class="wc-tnote">Partial table — group still in progress.</div>` : "";
+    return `<div class="wc-table">${head}${rows}${note}</div>`;
+  }
+
   /** "in 4m" / "in 1h 2m" / "shortly" — for the data-health retry copy. */
   function retryPhrase(nextRetryAt, now) {
     if (!nextRetryAt || nextRetryAt <= now) return "shortly";
@@ -121,15 +151,19 @@
   function card(model, now) {
     const {
       deck = [], fetchedAt, stale, refreshing, loadError, health,
-      favorites = [], favFilter = false, canFilter = false, icon = "",
+      favorites = [], favFilter = false, canFilter = false,
+      mode = "match", standings = null, canTable = false, icon = "",
     } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
 
+    const tableMode = mode === "table";
     const banner = healthBanner(health, now);
     let body;
     let nav = "";
-    if (loadError) {
+    if (tableMode) {
+      body = standingsBody(standings);
+    } else if (loadError) {
       body = `<div class="wc-empty">Couldn't load World Cup data.</div>`;
     } else if (!deck.length) {
       body = favFilter
@@ -147,11 +181,14 @@
       }
     }
 
-    const favBtn = canFilter
+    const tableBtn = canTable
+      ? `<span class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">☰</span>`
+      : "";
+    const favBtn = canFilter && !tableMode
       ? `<span class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</span>`
       : "";
 
-    const yourNext = !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
+    const yourNext = !tableMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
 
     const foot = fetchedAt
       ? `<span class="wc-foot">Updated ${esc(ago(fetchedAt, now))}${stale ? " · offline" : ""} · TheSportsDB</span>`
@@ -162,6 +199,7 @@
         <div class="wc-head">
           <span class="wc-dot"><img src="${icon}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
+          ${tableBtn}
           ${favBtn}
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
           <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>

@@ -88,6 +88,9 @@
 /* favorites-only filter toggle (gold when active) */
 #wc-overlay-root .wc-favfilter { color: rgba(255, 255, 255, 0.78); font-size: 13px; }
 #wc-overlay-root .wc-favfilter.on { color: #ffd23f; }
+/* group-table toggle (gold when active) */
+#wc-overlay-root .wc-tabletoggle { color: rgba(255, 255, 255, 0.82); font-size: 14px; }
+#wc-overlay-root .wc-tabletoggle.on { color: #ffd23f; }
 #wc-overlay-root .wc-spin { animation: wc-rot 0.7s linear infinite; pointer-events: none; }
 @keyframes wc-rot {
   from { transform: rotate(0deg); }
@@ -259,6 +262,57 @@
   border-radius: 8px;
 }
 #wc-overlay-root .wc-count:hover { background: rgba(255, 255, 255, 0.14); }
+
+/* ---- group standings table ---- */
+#wc-overlay-root .wc-table { display: block; }
+#wc-overlay-root .wc-trow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: #ffffff;
+  font-size: 12px;
+}
+#wc-overlay-root .wc-trow + .wc-trow { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+#wc-overlay-root .wc-thead {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+#wc-overlay-root .wc-tpos {
+  width: 16px;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+#wc-overlay-root .wc-tteam {
+  flex: 1 1 auto;
+  color: #ffffff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#wc-overlay-root .wc-tteam .wc-flag { font-size: 13px; margin-right: 5px; vertical-align: -1px; }
+#wc-overlay-root .wc-tnum {
+  width: 30px;
+  flex: 0 0 auto;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+#wc-overlay-root .wc-tpts { color: #ffffff; font-weight: 800; }
+#wc-overlay-root .wc-trow.q .wc-tpos { color: #4ade80; font-weight: 800; }
+#wc-overlay-root .wc-trow.q .wc-tteam { color: #eafff0; }
+#wc-overlay-root .wc-tnote {
+  display: block;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 10px;
+}
 
 #wc-overlay-root .wc-foot-wrap { display: block; padding: 4px 13px 11px; }
 #wc-overlay-root .wc-yournext {

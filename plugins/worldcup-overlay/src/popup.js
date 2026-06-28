@@ -5,6 +5,7 @@
 
 (() => {
   const MSG_GET_STATE = "WC_GET_STATE"; // must match config.MSG.GET_STATE
+  const MSG_GET_STANDINGS = "WC_GET_STANDINGS";
   const SETTINGS_KEY = self.WC.settings.KEY;
   const ICON = chrome.runtime.getURL("icons/icon48.png");
   const WC = self.WC;
@@ -21,6 +22,9 @@
   let settings = self.WC.settings.DEFAULTS;
   let favorites = [];
   let favFilter = false;
+  let tableMode = false;
+  let tableGroup = "";
+  let standings = null;
 
   function viewDeck() {
     return favFilter ? deck.filter((m) => m.isFavorite) : deck;
@@ -32,6 +36,13 @@
     return i >= 0 ? i : 0;
   }
 
+  function currentGroup() {
+    const vd = viewDeck();
+    if (!vd.length) return "";
+    const i = cursor != null && cursor < vd.length ? cursor : clampPrimaryToView(vd);
+    return vd[i] && vd[i].group ? vd[i].group : "";
+  }
+
   function render() {
     const now = Date.now();
     const canFilter = deck.some((m) => m.isFavorite);
@@ -40,7 +51,10 @@
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
 
     root.innerHTML = WC.render.card(
-      { deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health, favorites, favFilter, canFilter, icon: ICON },
+      {
+        deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health, favorites, favFilter, canFilter,
+        mode: tableMode ? "table" : "match", standings, canTable: tableMode || !!currentGroup(), icon: ICON,
+      },
       now
     );
     root.querySelectorAll(".wc-arrow").forEach((b) =>
@@ -49,12 +63,47 @@
     const count = root.querySelector(".wc-count");
     if (count) count.addEventListener("click", () => { cursor = clampPrimaryToView(viewDeck()); render(); });
     const refresh = root.querySelector(".wc-refresh");
-    if (refresh) refresh.addEventListener("click", () => { if (!refreshing) requestState(true); });
+    if (refresh) refresh.addEventListener("click", () => {
+      if (refreshing) return;
+      if (tableMode) requestStandings(tableGroup, true);
+      else requestState(true);
+    });
     root.querySelectorAll(".wc-star").forEach((b) =>
       b.addEventListener("click", (e) => { e.stopPropagation(); toggleFavorite(b.dataset.team); })
     );
     const favBtn = root.querySelector(".wc-favfilter");
     if (favBtn) favBtn.addEventListener("click", () => { favFilter = !favFilter; cursor = null; render(); });
+    const tableBtn = root.querySelector(".wc-tabletoggle");
+    if (tableBtn) tableBtn.addEventListener("click", () => toggleTable());
+  }
+
+  function toggleTable() {
+    if (tableMode) {
+      tableMode = false;
+      standings = null;
+      render();
+      return;
+    }
+    const group = currentGroup();
+    if (!group) return;
+    tableMode = true;
+    tableGroup = group;
+    standings = { group, loading: true };
+    render();
+    requestStandings(group);
+  }
+
+  function requestStandings(group, force) {
+    try {
+      chrome.runtime.sendMessage({ type: MSG_GET_STANDINGS, group, force: !!force }, (resp) => {
+        if (!tableMode || group !== tableGroup) return;
+        standings = chrome.runtime.lastError || !resp ? { group, error: true, rows: [] } : resp;
+        render();
+      });
+    } catch (_) {
+      standings = { group, error: true, rows: [] };
+      render();
+    }
   }
 
   function rotate(dir) {

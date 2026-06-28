@@ -27,8 +27,9 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
       pure `applyFavorites`/`favoriteIndex`/`teamIsFavorite`/`matchHasFavorite`/`nextFavoriteFixture`
       in `wc-state.js`; worker `decorate`s the cached deck per `GET_STATE` (re-rank, no refetch);
       favorites-only filter toggle + a "Your next" line; mirrored in the popup.
-- [ ] **Group standings** — pure `standings.js` (P/W/D/L/GF/GA/GD/Pts, FIFA tiebreakers, top-2 qualify);
-      season-wide fetch routed through sanitize/reconcile; table-view toggle.
+- [x] **Group standings** — pure `standings.js` (P/W/D/L/GF/GA/GD/Pts, FIFA tiebreakers, top-2 qualify);
+      season-wide fetch (`fetchSeason`, lazy + 30-min cache) routed through sanitize/reconcile; ☰
+      table-view toggle in the overlay + popup, with partial-table note. New `WC_GET_STANDINGS` message.
 - [ ] **Team form strip** — pure `form.js` (`teamForm` → W/D/L, GF/GA, last[]) under each team.
 - [ ] _Fast-follow:_ favorites management section on the options page (overlay/popup ★ covers it for now).
 
