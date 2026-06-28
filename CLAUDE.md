@@ -12,30 +12,43 @@ GitHub: `git@github.com:jj-jakub/ChromePluginsWC2026.git` (origin uses **SSH** �
 creds on this machine, so push over SSH).
 
 ## Plugins
-- **worldcup-overlay** — a floating widget pinned to the **top-right of every page** showing
-  FIFA World Cup 2026: the live match, else next fixture, else last result. Country flags,
+- **worldcup-overlay** — a floating widget pinned to a **configurable corner of every page**
+  showing FIFA World Cup 2026: the live match, else next fixture, else last result. Country flags,
   ‹ › arrows to rotate the whole match deck, a counter that jumps back to "current", a manual
-  ↻ refresh, and minimize-to-ball. Confirmed working in Chrome.
+  ↻ refresh, and minimize-to-ball. Also ships a **toolbar popup** (same card on icon-click) and an
+  **options page** (corner, start-minimized, refresh interval; `chrome.storage.sync`). Confirmed
+  working in Chrome.
 
 ## worldcup-overlay architecture
 Two worlds talking over one message, `WC_GET_STATE`:
 ```
 src/
-  config.js          all tunables (API key/league/season, cache TTLs, alarm, live window, msg)
+  config.js          all tunables (API key/league/season, cache TTLs, alarm, live window, msg, settings mirror)
   ── background (ES modules, service worker type:module) ──
-  service-worker.js  fetch → buildDeck → storage cache → chrome.alarms; answers WC_GET_STATE
+  service-worker.js  fetch → buildDeck → storage cache → chrome.alarms (period from settings); answers WC_GET_STATE
   api.js             TheSportsDB client: fetch fixture window + normalize → WcEvent
   wc-state.js        PURE: phaseOf / isLiveNow / matchModeOf / classify / buildDeck (no chrome/net)
-  ── content script (classic; share a single self.WC namespace, loaded before content.js) ──
+  ── content scripts (classic; share one self.WC namespace, loaded in this order before content.js) ──
   format.js          self.WC.fmt — esc / clock / dayLabel / until / ago
   flags.js           self.WC.flag — country → emoji flag
-  content.js         inject isolated widget, render the deck, rotate / refresh / minimize
-  content.css        scoped styles
-test/                node --test (20 cases) over wc-state, api, flags, format
+  settings.js        self.WC.settings — PURE DEFAULTS + normalize() gatekeeper for chrome.storage.sync
+  render.js          self.WC.render — PURE HTML builders (card / mini / matchBody); reused by the popup
+  content.js         inject isolated widget, read settings, render the deck, rotate / refresh / minimize
+  content.css        scoped styles (+ .wc-pos-* corner classes)
+  ── extension pages (own documents; normal CSS, no all:initial) ──
+  options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
+  popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
+test/                node --test (38 cases) over wc-state, api, flags, format, settings, render
 ```
 
 ## Key decisions (this is why things are the way they are)
-- **Display = content-script overlay**, fixed top-right, isolated under `#wc-overlay-root`.
+- **Display = content-script overlay**, fixed to a user-chosen corner (`.wc-pos-*` class from
+  settings), isolated under `#wc-overlay-root`. The **popup reuses the same `#wc-overlay-root` +
+  `content.css`** so the card looks identical on the toolbar icon.
+- **Settings live in `chrome.storage.sync`** behind one pure gatekeeper, `settings.normalize()`
+  (in `settings.js`): it clamps/whitelists every field and drops unknown keys, so a stale or
+  corrupted stored object can never crash the content world or the worker. The worker mirrors the
+  few values it needs in `config.js` (same discipline as the duplicated `MSG` string).
 - **Data = TheSportsDB free public key `"3"`, no signup.** League **4429** (FIFA World Cup),
   season **2026**. Workhorse endpoint `eventsday.php?d=YYYY-MM-DD&l=4429` (+ next/past league).
   Free tier has **no live-score feed** → "live" is inferred from the kickoff window
@@ -52,9 +65,10 @@ test/                node --test (20 cases) over wc-state, api, flags, format
   its own `color`, or it renders **black** (was black-on-green until fixed). Watch this for any
   injected UI.
 - **Content scripts can't use ES modules from the manifest.** Hence the `self.WC` namespace
-  shared across `format.js`/`flags.js`/`content.js`. The background IS `type:module` and imports
-  `config.js` normally — but content can't, so the message string `"WC_GET_STATE"` is duplicated
-  in `content.js` and must match `config.MSG.GET_STATE`.
+  shared across `format.js`/`flags.js`/`settings.js`/`render.js`/`content.js` (loaded in that
+  order). Any pure helper both worlds need is either a classic `self.WC` file tested via the
+  `self` shim, or duplicated: the message string `"WC_GET_STATE"` and the settings `KEY`/clamp
+  range are duplicated in `config.js` and must match.
 - **You cannot load an unpacked extension via automation here.** Chrome 149 removed the
   `--load-extension` CLI flag; Chrome is sandboxed read-only (no clicking `chrome://` or the
   native file picker). Loading is a manual user action: `chrome://extensions` → Developer mode →

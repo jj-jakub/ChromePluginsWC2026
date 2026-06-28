@@ -1,0 +1,29 @@
+/* Popup-only overrides on top of content.css. The popup is its own extension page, so the
+   overlay card sits statically (not fixed) and fills the popup; minimize is meaningless here. */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Override the injected-overlay positioning: in the popup the card is the whole document. */
+#wc-overlay-root {
+  position: static;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  left: auto;
+}
+
+#wc-overlay-root .wc-card {
+  width: 300px;
+  border-radius: 0;
+  animation: none;
+}
+
+/* No minimize-to-ball inside a popup. */
+#wc-overlay-root .wc-min {
+  display: none;
+}

@@ -1,39 +1,70 @@
-# PLAN — next steps
+# PLAN — worldcup-overlay 1.0 roadmap
 
-Backlog for ChromePluginsWC2026. Roughly prioritized; nothing here is committed work.
+Driving the overlay to a top-class, store-ready 1.0. Built in ~7 coherent commits, foundations
+first so later preferences have a home. Every item respects the hard constraints (no build, no
+deps, CSP-safe, content-scripts-can't-import-modules, network-only-in-SW, `all:initial` color
+discipline, least-privilege). Only **one** new permission across the whole roadmap:
+`notifications`. Pure logic stays `chrome`/network-free and unit-tested.
 
-## worldcup-overlay — polish
-- [ ] **Settings / options page** — let the user pick corner (TL/TR/BL/BR), toggle auto-show
-      per-site, set refresh interval, and choose a favorite team to pin. Persist in
-      `chrome.storage.sync`.
-- [ ] **Toolbar popup** — a click-the-icon popup as an alternative to the always-on overlay
-      (some users won't want it on every page). Reuse the same render code.
-- [ ] **Per-site allow/deny list** — don't inject on sites the user excludes.
-- [ ] **Goal/kickoff notifications** — `chrome.notifications` when a tracked match starts or the
-      score changes (needs the live-score upgrade below to be meaningful).
-- [ ] **Knockout bracket view** — a second tab/mode once the group stage ends.
-- [ ] **Windows flag fallback** — emoji flags render as 2-letter codes on Windows; optionally
-      swap to small SVG/PNG flag assets bundled locally (still no network/CSP issues).
+Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 
-## Data
-- [ ] **Live scores** — wire a patron TheSportsDB key + the v2 livescore endpoint in `api.js`
-      (config already isolates the key). Replaces the kickoff-window heuristic for in-play.
-- [ ] **Resilience** — exponential backoff on repeated fetch failures; surface a clearer
-      "data provider down" state.
-- [ ] **Cross-check a second source** (e.g. football-data.org) if TheSportsDB WC coverage gaps.
+## Commit 1 — Foundations
+- [x] **Settings store + options page** — pure `settings.js` (`DEFAULTS` + `normalize()` gatekeeper),
+      `options.html/js/css`, `chrome.storage.sync`, live `onChanged` updates; worker reads the
+      refresh interval to set its alarm. Wired controls: corner, start-minimized, refresh interval.
+- [x] **Render extraction + toolbar popup** — moved the markup builders into pure `render.js`
+      (`card`/`mini`/`matchBody`), reused by a new `action.default_popup` page. `render.test.mjs`.
 
-## Repo / tooling
-- [ ] **CI** — GitHub Actions running `node --test` (+ manifest JSON validation) on push/PR.
-- [ ] **Lint/format** — optional Prettier + ESLint config (keep it zero-runtime-dependency for
-      the extensions themselves; dev-only).
-- [ ] **Shared utilities** — if a second plugin needs the same helpers, extract a `shared/`
-      with a documented copy-or-symlink convention (no cross-plugin runtime imports).
-- [ ] **Screenshots in CI** — headless render of the overlay states for the README (was blocked
-      locally by the port-8787 conflict).
+## Commit 2 — Data integrity & resilience
+- [ ] **Robust parsing** — `sanitize.js` (defensive per-record coercion, never throws) + `reconcile.js`
+      (merge duplicate `idEvent` across endpoints; most-progressed wins; low-confidence flag).
+- [ ] **Backoff / health / provider-down** — `backoff.js` (`nextDelay` capped exponential,
+      `classifyHealth` ok|degraded|down); worker persists failures + `nextRetryAt`; precise degraded copy.
+
+## Commit 3 — Engagement + real data
+- [ ] **Favorites (multi-team pin)** — ★ toggle; pure `primaryIndexFor`/`isFavorite`/`filterDeck`/
+      `nextFavoriteFixture` in `wc-state.js`; worker re-ranks per `GET_STATE`; favorites-only filter + footer.
+- [ ] **Group standings** — pure `standings.js` (P/W/D/L/GF/GA/GD/Pts, FIFA tiebreakers, top-2 qualify);
+      season-wide fetch routed through sanitize/reconcile; table-view toggle.
+- [ ] **Team form strip** — pure `form.js` (`teamForm` → W/D/L, GF/GA, last[]) under each team.
+
+## Commit 4 — Match depth
+- [ ] **Per-match details** — `roundLabel(round, stage)` in `format.js` (Matchday N / Round of 16 / QF / SF / Final); chevron details strip.
+- [ ] **Today's agenda / list mode** — pure `agenda.js` `groupByDay`; scrollable day-grouped list toggle.
+- [ ] **Estimated live minute** — pure `estimatedMinute(ev, now)` (HT gap, cap 90+, `~` prefix, yields to provider progress).
+
+## Commit 5 — Glanceable & actionable
+- [ ] **Score-change feedback** — pure `score-diff.js` (`diff`/`announceFor`); GOAL pulse + visually-hidden `aria-live` region (reduced-motion-safe).
+- [ ] **Add-to-calendar (.ics)** — pure `ics.js` (RFC5545 CRLF/escaping, VEVENT + VALARM, stable UID); `data:` anchor download.
+- [ ] **Desktop notifications** — pure `notify.js` `diffForNotifications`; worker fires `chrome.notifications` (favorites-only default). **+`notifications` permission.**
+- [ ] **Toolbar badge** — pure `badge.js` `badgeFor` (live score red / countdown / idle, ~4-char clamp, favorite-aware).
+
+## Commit 6 — Accessibility, i18n & placement
+- [ ] **Accessibility & keyboard** — real `<button>`s; pure `keymap.js` `keyToAction` (←/→/Esc/R/Enter/Space); `:focus-visible`, `prefers-reduced-motion`, `forced-colors`.
+- [ ] **i18n + Intl dates + RTL** — `_locales/{en,es,fr,de,pt}`, `self.WC.t` fallback wrapper, `default_locale` + `__MSG__`, Intl date/relative formatting, RTL mirroring.
+- [ ] **Per-site allow/deny list** — pure `site-match.js` (exact / `.suffix` / `*`; deny|allow); content early-return; options textarea.
+- [ ] **Drag-to-reposition** — pure `position.js` (`nearestCorner`/`clampToViewport`); header drag + corner snap, persisted.
+- [ ] **Theme: auto / light / dark** — pure `resolveTheme(pref, systemDark)`; `.wc-theme-*` CSS variants.
+
+## Commit 7 — Distribution / store gate
+- [ ] **CI + manifest validator** — `.github/workflows/ci.yml` (node --test + validate + package artifact); pure `scripts/validate-manifest.mjs`; README badge; guarded footer version stamp.
+- [ ] **Privacy & permission docs** — `docs/privacy-policy.md`, `docs/store-listing.md` (per-permission justification), `PRIVACY.md`; written LAST so the permission table is final.
+
+## Deferred (post-1.0)
+- Knockout bracket view (empty until group stage ends; season fetch lands it cheaply later).
+- Head-to-head line (free-tier past window rarely contains a prior meeting).
+- Team-tint accent strip; compact-density peek; share-match-to-clipboard; first-run onboarding.
+- **Live scores via a patron TheSportsDB key** + v2 livescore endpoint — upgrades inferred-live,
+  score deltas, notifications and the badge to true real-time with no other code change.
+- Windows flag fallback (emoji → bundled SVG/PNG) — OS limitation; lower priority.
+
+## Known limitations to revisit
+- Live status is inferred, not real (free API tier) — see patron-key note above.
+- No automated way to load the unpacked extension (manual step; see CLAUDE.md gotchas).
+
+## Repo / tooling (ongoing)
+- [ ] Optional dev-only Prettier/ESLint (zero runtime dep for the shipped extension).
+- [ ] `shared/` helpers convention if a second plugin needs them (no cross-plugin runtime imports).
 
 ## New plugins (ideas)
 - [ ] Pick the next plugin idea and scaffold from `plugins/_template/`.
-
-## Known limitations to revisit
-- Live status is inferred, not real (free API tier) — see Data → Live scores.
-- No automated way to load the unpacked extension (manual step; see CLAUDE.md gotchas).

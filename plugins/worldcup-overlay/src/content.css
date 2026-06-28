@@ -14,10 +14,18 @@
 
 #wc-overlay-root {
   position: fixed;
+  z-index: 2147483647;
+  /* default corner (top-right) until the saved setting is applied as a .wc-pos-* class */
   top: 16px;
   right: 16px;
-  z-index: 2147483647;
 }
+
+/* Corner placement — id+class beats the bare-id default above. Each restates all four edges so
+   switching corners can't leave a stale one. */
+#wc-overlay-root.wc-pos-tl { top: 16px; left: 16px; right: auto; bottom: auto; }
+#wc-overlay-root.wc-pos-tr { top: 16px; right: 16px; left: auto; bottom: auto; }
+#wc-overlay-root.wc-pos-bl { bottom: 16px; left: 16px; top: auto; right: auto; }
+#wc-overlay-root.wc-pos-br { bottom: 16px; right: 16px; top: auto; left: auto; }
 
 /* ---- full card ---- */
 #wc-overlay-root .wc-card {

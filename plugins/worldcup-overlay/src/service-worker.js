@@ -6,7 +6,7 @@
 
 import { fetchEvents } from "./api.js";
 import { buildDeck } from "./wc-state.js";
-import { ALARM, CACHE, MSG } from "./config.js";
+import { ALARM, CACHE, MSG, SETTINGS } from "./config.js";
 
 /**
  * @typedef {Object} WcState   What the overlay renders.
@@ -78,8 +78,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   return false;
 });
 
-function ensureAlarm() {
-  chrome.alarms.create(ALARM.NAME, { periodInMinutes: ALARM.PERIOD_MIN });
+/** The user's refresh interval (minutes), clamped, defaulting to ALARM.PERIOD_MIN. */
+async function refreshMinutes() {
+  try {
+    const got = await chrome.storage.sync.get(SETTINGS.KEY);
+    const n = Math.round(Number(got[SETTINGS.KEY]?.refreshMins));
+    if (Number.isFinite(n)) {
+      return Math.min(SETTINGS.REFRESH_MAX_MINUTES, Math.max(SETTINGS.REFRESH_MIN_MINUTES, n));
+    }
+  } catch (_) {}
+  return ALARM.PERIOD_MIN;
+}
+
+async function ensureAlarm() {
+  chrome.alarms.create(ALARM.NAME, { periodInMinutes: await refreshMinutes() });
 }
 
 function warmUp() {
@@ -89,6 +101,11 @@ function warmUp() {
 
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === ALARM.NAME) refresh().catch((e) => console.warn(TAG, "alarm refresh", e));
+});
+
+// Re-arm the alarm when the user changes their refresh interval.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "sync" && changes[SETTINGS.KEY]) ensureAlarm();
 });
 
 chrome.runtime.onInstalled.addListener(warmUp);

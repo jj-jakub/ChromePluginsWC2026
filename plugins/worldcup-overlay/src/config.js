@@ -28,10 +28,21 @@ export const CACHE = {
   TTL_IDLE_MS: 5 * 60 * 1000,
 };
 
-/** Background refresh alarm (chrome.alarms). */
+/** Background refresh alarm (chrome.alarms). PERIOD_MIN is the default when no user override. */
 export const ALARM = {
   NAME: "wc-refresh",
   PERIOD_MIN: 2,
+};
+
+/**
+ * Mirror of the few user-settings the worker reads (the rest live content-side in settings.js,
+ * which the module worker can't import — same duplication discipline as MSG.GET_STATE).
+ * The canonical schema + validator is src/settings.js (self.WC.settings).
+ */
+export const SETTINGS = {
+  KEY: "wc_settings", // settings.js: WC.settings.KEY
+  REFRESH_MIN_MINUTES: 1, // settings.js: REFRESH_MIN
+  REFRESH_MAX_MINUTES: 30, // settings.js: REFRESH_MAX
 };
 
 /** Message protocol between content scripts and the service worker. content: "WC_GET_STATE". */

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>World Cup Overlay</title>
+    <!-- Reuse the overlay's own scoped styles, then a few popup-only overrides. -->
+    <link rel="stylesheet" href="content.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- Same #wc-overlay-root container the content script renders into, so render.js markup
+         picks up the identical styles. -->
+    <div id="wc-overlay-root" class="wc-overlay"></div>
+
+    <script src="format.js"></script>
+    <script src="flags.js"></script>
+    <script src="render.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

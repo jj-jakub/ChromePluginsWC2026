@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>World Cup Overlay — Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="head">
+        <img class="logo" src="../icons/icon48.png" alt="" />
+        <div>
+          <h1>World Cup Overlay</h1>
+          <p class="sub">FIFA World Cup 2026 — settings</p>
+        </div>
+      </header>
+
+      <section class="card">
+        <h2>Position</h2>
+        <p class="hint">Which corner the overlay sits in, on every page.</p>
+        <div class="corners" role="radiogroup" aria-label="Overlay corner">
+          <label><input type="radio" name="corner" value="tl" /><span>Top left</span></label>
+          <label><input type="radio" name="corner" value="tr" /><span>Top right</span></label>
+          <label><input type="radio" name="corner" value="bl" /><span>Bottom left</span></label>
+          <label><input type="radio" name="corner" value="br" /><span>Bottom right</span></label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Behavior</h2>
+        <label class="row" for="startMinimized">
+          <span class="label"
+            ><strong>Start minimized</strong
+            ><small>Show only the small ball until you click it.</small></span
+          >
+          <input type="checkbox" id="startMinimized" />
+        </label>
+        <label class="row" for="refreshMins">
+          <span class="label"
+            ><strong>Refresh interval</strong
+            ><small>How often scores update in the background.</small></span
+          >
+          <span class="range">
+            <input type="range" id="refreshMins" min="1" max="30" step="1" />
+            <output id="refreshOut" for="refreshMins"></output>
+          </span>
+        </label>
+      </section>
+
+      <footer class="foot">
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+        <span class="muted">Settings sync across your Chrome profiles.</span>
+      </footer>
+    </main>
+
+    <script src="settings.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
