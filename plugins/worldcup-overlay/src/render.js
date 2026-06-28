@@ -259,13 +259,13 @@
     }
 
     const agendaBtn = !loadError && deck.length
-      ? `<span class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? "Show match" : "All fixtures"}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</span>`
+      ? `<button type="button" class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? "Show match" : "All fixtures"}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</button>`
       : "";
     const tableBtn = canTable
-      ? `<span class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</span>`
+      ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
       : "";
     const favBtn = canFilter && !tableMode && !agendaMode
-      ? `<span class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</span>`
+      ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
       : "";
 
     const yourNext = !tableMode && !agendaMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
@@ -284,8 +284,8 @@
           ${agendaBtn}
           ${tableBtn}
           ${favBtn}
-          <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
-          <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
+          <button type="button" class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</button>
+          <button type="button" class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</button>
         </div>
         ${goal}
         ${banner}
@@ -299,9 +299,9 @@
   function mini(model) {
     const { deck = [], icon = "" } = model || {};
     const live = deck.some((m) => m.matchMode === "live");
-    return `<div class="wc-mini" title="FIFA World Cup — click to expand">
-        <img src="${icon}" alt="World Cup">${live ? '<span class="wc-mini-live"></span>' : ""}
-      </div>`;
+    return `<button type="button" class="wc-mini" title="FIFA World Cup — click to expand" aria-label="Expand World Cup overlay">
+        <img src="${icon}" alt="">${live ? '<span class="wc-mini-live"></span>' : ""}
+      </button>`;
   }
 
   WC.render = { teamRow, matchBody, card, mini };

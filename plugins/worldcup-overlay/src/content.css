@@ -512,10 +512,40 @@
   50% { transform: scale(1.3); color: #ffd23f; }
   100% { transform: scale(1); color: #ffffff; }
 }
+/* ---- accessibility ---- */
+/* visible keyboard focus ring (all:initial strips the default outline) */
+#wc-overlay-root button:focus-visible,
+#wc-overlay-root .wc-mini:focus-visible,
+#wc-overlay-root .wc-agrow:focus-visible {
+  outline: 2px solid #ffd23f;
+  outline-offset: 2px;
+}
+
+/* respect users who prefer less motion — neutralize every animation/transition */
 @media (prefers-reduced-motion: reduce) {
+  #wc-overlay-root .wc-card,
+  #wc-overlay-root .wc-spin,
+  #wc-overlay-root .wc-live-dot,
+  #wc-overlay-root .wc-mini-live,
+  #wc-overlay-root .wc-mini,
   #wc-overlay-root .wc-goalflash,
   #wc-overlay-root .wc-card.wc-goal .wc-score {
-    animation: none;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Windows High Contrast / forced colors — keep a visible boundary + focus ring via system colors */
+@media (forced-colors: active) {
+  #wc-overlay-root .wc-card,
+  #wc-overlay-root .wc-mini {
+    border: 1px solid CanvasText;
+  }
+  #wc-overlay-root button:focus-visible,
+  #wc-overlay-root .wc-mini:focus-visible,
+  #wc-overlay-root .wc-agrow:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 }
 

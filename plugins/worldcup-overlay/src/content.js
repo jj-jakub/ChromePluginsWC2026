@@ -371,9 +371,42 @@
     }
   }
 
+  // Keyboard control — the listener lives on the persistent root, so it survives re-renders and
+  // only fires when focus is inside the widget (so it never hijacks page typing/shortcuts).
+  function focusSel(sel) {
+    const el = root.querySelector(sel);
+    if (el) el.focus();
+  }
+  function setupKeyboard() {
+    root.addEventListener("keydown", (e) => {
+      if (blocked) return;
+      const isRtl = (document.documentElement.dir || document.dir) === "rtl";
+      const action = WC.keymap ? WC.keymap.keyToAction(e.key, { minimized, isRtl }) : null;
+      if (!action) return;
+      e.preventDefault();
+      if (action === "earlier" && !tableMode && !agendaMode) {
+        rotate(-1);
+        focusSel('.wc-arrow[data-dir="-1"]');
+      } else if (action === "later" && !tableMode && !agendaMode) {
+        rotate(1);
+        focusSel('.wc-arrow[data-dir="1"]');
+      } else if (action === "minimize" && !minimized) {
+        setMinimized(true);
+        focusSel(".wc-mini");
+      } else if (action === "refresh" && !refreshing) {
+        requestState(true);
+        focusSel(".wc-refresh");
+      } else if (action === "expand" && minimized) {
+        setMinimized(false);
+        focusSel(".wc-refresh");
+      }
+    });
+  }
+
   // ---- init ----
   function start() {
     evalSite();
+    setupKeyboard();
     applyChrome();
     render();
     requestState();
