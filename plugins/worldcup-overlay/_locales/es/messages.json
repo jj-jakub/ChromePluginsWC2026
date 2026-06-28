@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "Marcador Mundial — FIFA WC 2026" },
+  "extDescription": {
+    "message": "Muestra el partido en vivo del Mundial 2026 — o el próximo partido / último resultado — en la esquina de cada página."
+  },
+  "statusLive": { "message": "En vivo" },
+  "statusUpNext": { "message": "Próximo" },
+  "statusFullTime": { "message": "Final" },
+  "titleRefresh": { "message": "Actualizar" },
+  "titleMinimize": { "message": "Minimizar" },
+  "titleAllFixtures": { "message": "Todos los partidos" },
+  "titleGroupTable": { "message": "Tabla del grupo" },
+  "labelCalendar": { "message": "Calendario" },
+  "yourNext": { "message": "Tu próximo:" },
+  "footUpdated": { "message": "Actualizado" },
+  "emptyNoMatches": { "message": "No hay partidos del Mundial ahora mismo." },
+  "emptyError": { "message": "No se pudieron cargar los datos del Mundial." }
+}

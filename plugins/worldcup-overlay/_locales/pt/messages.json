@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "Placar da Copa — FIFA WC 2026" },
+  "extDescription": {
+    "message": "Mostra o jogo ao vivo da Copa do Mundo 2026 — ou o próximo jogo / último resultado — no canto de cada página."
+  },
+  "statusLive": { "message": "Ao vivo" },
+  "statusUpNext": { "message": "A seguir" },
+  "statusFullTime": { "message": "Fim de jogo" },
+  "titleRefresh": { "message": "Atualizar" },
+  "titleMinimize": { "message": "Minimizar" },
+  "titleAllFixtures": { "message": "Todos os jogos" },
+  "titleGroupTable": { "message": "Tabela do grupo" },
+  "labelCalendar": { "message": "Calendário" },
+  "yourNext": { "message": "Seu próximo:" },
+  "footUpdated": { "message": "Atualizado" },
+  "emptyNoMatches": { "message": "Nenhum jogo da Copa no momento." },
+  "emptyError": { "message": "Não foi possível carregar os dados da Copa." }
+}

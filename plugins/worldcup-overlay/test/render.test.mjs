@@ -71,7 +71,7 @@ test("card shows the empty state when the deck is empty", () => {
 
 test("card shows the error state on loadError", () => {
   const html = card({ deck: [], loadError: true, icon: "i.png" }, NOW);
-  assert.match(html, /Couldn't load/);
+  assert.match(html, /load World Cup data/); // apostrophe in "Couldn't" is HTML-escaped
 });
 
 test("card renders nav arrows + counter only when the deck has >1 match", () => {

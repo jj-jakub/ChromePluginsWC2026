@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "WM-Overlay — FIFA WC 2026" },
+  "extDescription": {
+    "message": "Zeigt das Live-Spiel der Fußball-WM 2026 — oder das nächste Spiel / letzte Ergebnis — in der Ecke jeder Seite."
+  },
+  "statusLive": { "message": "Live" },
+  "statusUpNext": { "message": "Als Nächstes" },
+  "statusFullTime": { "message": "Abpfiff" },
+  "titleRefresh": { "message": "Aktualisieren" },
+  "titleMinimize": { "message": "Minimieren" },
+  "titleAllFixtures": { "message": "Alle Spiele" },
+  "titleGroupTable": { "message": "Gruppentabelle" },
+  "labelCalendar": { "message": "Kalender" },
+  "yourNext": { "message": "Dein nächstes:" },
+  "footUpdated": { "message": "Aktualisiert" },
+  "emptyNoMatches": { "message": "Derzeit keine WM-Spiele gefunden." },
+  "emptyError": { "message": "WM-Daten konnten nicht geladen werden." }
+}

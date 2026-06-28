@@ -1,0 +1,36 @@
+{
+  "extName": { "message": "World Cup Overlay — FIFA WC 2026" },
+  "extDescription": {
+    "message": "Shows the live FIFA World Cup 2026 match — or the next fixture / last result — in the corner of every page."
+  },
+
+  "statusLive": { "message": "Live" },
+  "statusUpNext": { "message": "Up next" },
+  "statusFullTime": { "message": "Full time" },
+
+  "titleRefresh": { "message": "Refresh now" },
+  "titleMinimize": { "message": "Minimize" },
+  "titleAllFixtures": { "message": "All fixtures" },
+  "titleShowMatch": { "message": "Show match" },
+  "titleGroupTable": { "message": "Group table" },
+  "titleFavoritesOnly": { "message": "Show favorites only" },
+  "titleShowAll": { "message": "Show all matches" },
+  "titleExpand": { "message": "FIFA World Cup — click to expand" },
+  "titleAddToCalendar": { "message": "Add to calendar" },
+  "labelCalendar": { "message": "Calendar" },
+
+  "yourNext": { "message": "Your next:" },
+  "footUpdated": { "message": "Updated" },
+  "footOffline": { "message": "offline" },
+
+  "emptyNoMatches": { "message": "No World Cup matches found right now." },
+  "emptyNoFavorites": { "message": "No favorite matches right now." },
+  "emptyError": { "message": "Couldn't load World Cup data." },
+  "emptyNoSchedule": { "message": "No matches in the schedule." },
+  "emptyNoTable": { "message": "Group table not available yet." },
+  "loadingTable": { "message": "Loading group table…" },
+  "partialTable": { "message": "Partial table — group still in progress." },
+
+  "healthDelayed": { "message": "Live data delayed." },
+  "healthDown": { "message": "Can't reach live data." }
+}

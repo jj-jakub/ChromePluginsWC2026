@@ -1,0 +1,18 @@
+{
+  "extName": { "message": "Coupe du Monde — FIFA WC 2026" },
+  "extDescription": {
+    "message": "Affiche le match en direct de la Coupe du Monde 2026 — ou le prochain match / dernier résultat — dans le coin de chaque page."
+  },
+  "statusLive": { "message": "En direct" },
+  "statusUpNext": { "message": "À venir" },
+  "statusFullTime": { "message": "Terminé" },
+  "titleRefresh": { "message": "Actualiser" },
+  "titleMinimize": { "message": "Réduire" },
+  "titleAllFixtures": { "message": "Tous les matchs" },
+  "titleGroupTable": { "message": "Classement du groupe" },
+  "labelCalendar": { "message": "Calendrier" },
+  "yourNext": { "message": "Votre prochain :" },
+  "footUpdated": { "message": "Mis à jour" },
+  "emptyNoMatches": { "message": "Aucun match de la Coupe du Monde pour le moment." },
+  "emptyError": { "message": "Impossible de charger les données de la Coupe du Monde." }
+}

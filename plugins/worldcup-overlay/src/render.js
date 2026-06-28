@@ -11,6 +11,7 @@
   const WC = (self.WC = self.WC || {});
   const { esc, clock, dayLabel, until, ago, roundLabel, liveMinute } = WC.fmt;
   const flagOf = WC.flag;
+  const t = (k, f) => (WC.t ? WC.t(k, f) : f); // localized string, English fallback
 
   const favKey = (s) => String(s || "").trim().toLowerCase();
   const isFav = (name, favorites) => {
@@ -70,7 +71,7 @@
       const estTxt = est ? `~${est}${est >= 90 ? "+" : ""}'` : "";
       const prog = m.progress || estTxt || m.status || "Live";
       return `
-        <span class="wc-status live"><span class="wc-live-dot"></span>Live</span>
+        <span class="wc-status live"><span class="wc-live-dot"></span>${t("statusLive", "Live")}</span>
         ${round}
         <div class="wc-teams">${teamRow(m.home, m.homeScore, false, fH)}${teamRow(m.away, m.awayScore, false, fA)}</div>
         ${form}
@@ -79,11 +80,12 @@
     }
     if (m.matchMode === "upcoming") {
       const when = ko ? `${esc(dayLabel(ko, now))} ${esc(clock(ko))} · ${esc(until(ko, now))}` : "Scheduled";
+      const calT = t("titleAddToCalendar", "Add to calendar");
       const cal = ko
-        ? `<button class="wc-cal" data-id="${esc(m.id)}" title="Add to calendar" aria-label="Add to calendar">＋ Calendar</button>`
+        ? `<button class="wc-cal" data-id="${esc(m.id)}" title="${esc(calT)}" aria-label="${esc(calT)}">＋ ${esc(t("labelCalendar", "Calendar"))}</button>`
         : "";
       return `
-        <span class="wc-status upcoming">Up next</span>
+        <span class="wc-status upcoming">${t("statusUpNext", "Up next")}</span>
         ${round}
         <div class="wc-teams">${teamRow(m.home, null, false, fH)}${teamRow(m.away, null, false, fA)}</div>
         ${form}
@@ -96,7 +98,7 @@
     const decided = hs != null && as != null;
     const when = ko ? `${esc(dayLabel(ko, now))} · ${esc(clock(ko))}` : "Recently played";
     return `
-      <span class="wc-status result">Full time</span>
+      <span class="wc-status result">${t("statusFullTime", "Full time")}</span>
       ${round}
       <div class="wc-teams">${teamRow(m.home, hs, decided && hs > as, fH)}${teamRow(m.away, as, decided && as > hs, fA)}</div>
       ${form}
@@ -119,14 +121,14 @@
     const m = cands[0];
     const when = m.matchMode === "live" ? "now" : until(m.kickoffMs, now);
     const fh = flagOf(m.home);
-    return `<div class="wc-yournext">Your next: ${fh ? `<span class="wc-flag">${fh}</span>` : ""}${esc(m.home)} v ${esc(m.away)} · ${esc(when)}</div>`;
+    return `<div class="wc-yournext">${esc(t("yourNext", "Your next:"))} ${fh ? `<span class="wc-flag">${fh}</span>` : ""}${esc(m.home)} v ${esc(m.away)} · ${esc(when)}</div>`;
   }
 
   /** Group standings table body. standings: { group, rows, partial, loading, error }. */
   function standingsBody(standings) {
-    if (!standings || standings.loading) return `<div class="wc-empty">Loading group table…</div>`;
+    if (!standings || standings.loading) return `<div class="wc-empty">${esc(t("loadingTable", "Loading group table…"))}</div>`;
     if (standings.error || !standings.rows || !standings.rows.length) {
-      return `<div class="wc-empty">Group table not available yet.</div>`;
+      return `<div class="wc-empty">${esc(t("emptyNoTable", "Group table not available yet."))}</div>`;
     }
     const head = `<div class="wc-trow wc-thead">
         <span class="wc-tpos"></span>
@@ -148,14 +150,14 @@
       </div>`;
       })
       .join("");
-    const note = standings.partial ? `<div class="wc-tnote">Partial table — group still in progress.</div>` : "";
+    const note = standings.partial ? `<div class="wc-tnote">${esc(t("partialTable", "Partial table — group still in progress."))}</div>` : "";
     return `<div class="wc-table">${head}${rows}${note}</div>`;
   }
 
   // One fixture row in the agenda list; clicking it jumps to that match (data-id).
   function agendaRow(m) {
     const live = m.matchMode === "live";
-    const t = live ? "LIVE" : m.kickoffMs ? clock(m.kickoffMs) : "";
+    const time = live ? "LIVE" : m.kickoffMs ? clock(m.kickoffMs) : "";
     const hf = flagOf(m.home);
     const af = flagOf(m.away);
     let mid;
@@ -167,14 +169,14 @@
       mid = `${h}-${a}`;
     }
     return `<button class="wc-agrow${live ? " live" : ""}" data-id="${esc(m.id)}" title="Show this match">
-        <span class="wc-agtime">${esc(t)}</span>
+        <span class="wc-agtime">${esc(time)}</span>
         <span class="wc-agteams">${hf ? `<span class="wc-flag">${hf}</span>` : ""}<span class="wc-agname">${esc(m.home)}</span><b class="wc-agscore">${mid}</b><span class="wc-agname">${esc(m.away)}</span>${af ? `<span class="wc-flag">${af}</span>` : ""}</span>
       </button>`;
   }
 
   /** Agenda list body: every fixture grouped under day headers. */
   function agendaBody(deck, now) {
-    if (!deck.length) return `<div class="wc-empty">No matches in the schedule.</div>`;
+    if (!deck.length) return `<div class="wc-empty">${esc(t("emptyNoSchedule", "No matches in the schedule."))}</div>`;
     const groups =
       WC.agenda && WC.agenda.groupByDay ? WC.agenda.groupByDay(deck, now) : [{ label: "", matches: deck }];
     return (
@@ -198,7 +200,7 @@
   function healthBanner(health, now) {
     if (!health || health.status === "ok") return "";
     const status = health.status === "down" ? "down" : "degraded";
-    const lead = status === "down" ? "Can't reach live data." : "Live data delayed.";
+    const lead = status === "down" ? t("healthDown", "Can't reach live data.") : t("healthDelayed", "Live data delayed.");
     const retry = `Retrying ${retryPhrase(health.nextRetryAt, now)}.`;
     const last = health.lastSuccessMs ? ` Last update ${ago(health.lastSuccessMs, now)}.` : "";
     return `<div class="wc-health wc-health-${status}">${lead} ${retry}${last}</div>`;
@@ -241,11 +243,11 @@
     } else if (agendaMode) {
       body = agendaBody(deck, now);
     } else if (loadError) {
-      body = `<div class="wc-empty">Couldn't load World Cup data.</div>`;
+      body = `<div class="wc-empty">${esc(t("emptyError", "Couldn't load World Cup data."))}</div>`;
     } else if (!deck.length) {
       body = favFilter
-        ? `<div class="wc-empty">No favorite matches right now.</div>`
-        : `<div class="wc-empty">No World Cup matches found right now.</div>`;
+        ? `<div class="wc-empty">${esc(t("emptyNoFavorites", "No favorite matches right now."))}</div>`
+        : `<div class="wc-empty">${esc(t("emptyNoMatches", "No World Cup matches found right now."))}</div>`;
     } else {
       body = matchBody(deck[cursor], now, favorites);
       if (deck.length > 1) {
@@ -258,20 +260,21 @@
       }
     }
 
+    const showMatchT = esc(t("titleShowMatch", "Show match"));
     const agendaBtn = !loadError && deck.length
-      ? `<button type="button" class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? "Show match" : "All fixtures"}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</button>`
+      ? `<button type="button" class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? showMatchT : esc(t("titleAllFixtures", "All fixtures"))}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</button>`
       : "";
     const tableBtn = canTable
-      ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
+      ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? showMatchT : esc(t("titleGroupTable", "Group table"))}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
       : "";
     const favBtn = canFilter && !tableMode && !agendaMode
-      ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
+      ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? esc(t("titleShowAll", "Show all matches")) : esc(t("titleFavoritesOnly", "Show favorites only"))}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
       : "";
 
     const yourNext = !tableMode && !agendaMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
 
     const foot = fetchedAt
-      ? `<span class="wc-foot">Updated ${esc(ago(fetchedAt, now))}${stale ? " · offline" : ""} · TheSportsDB</span>`
+      ? `<span class="wc-foot">${esc(t("footUpdated", "Updated"))} ${esc(ago(fetchedAt, now))}${stale ? ` · ${esc(t("footOffline", "offline"))}` : ""} · TheSportsDB</span>`
       : "";
 
     const goal = pulsing ? `<div class="wc-goalflash">⚽ GOAL!</div>` : "";
@@ -284,8 +287,8 @@
           ${agendaBtn}
           ${tableBtn}
           ${favBtn}
-          <button type="button" class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</button>
-          <button type="button" class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</button>
+          <button type="button" class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="${esc(t("titleRefresh", "Refresh now"))}" aria-label="${esc(t("titleRefresh", "Refresh now"))}">↻</button>
+          <button type="button" class="wc-icon wc-min" title="${esc(t("titleMinimize", "Minimize"))}" aria-label="${esc(t("titleMinimize", "Minimize"))}">–</button>
         </div>
         ${goal}
         ${banner}
@@ -299,7 +302,7 @@
   function mini(model) {
     const { deck = [], icon = "" } = model || {};
     const live = deck.some((m) => m.matchMode === "live");
-    return `<button type="button" class="wc-mini" title="FIFA World Cup — click to expand" aria-label="Expand World Cup overlay">
+    return `<button type="button" class="wc-mini" title="${esc(t("titleExpand", "FIFA World Cup — click to expand"))}" aria-label="${esc(t("titleExpand", "FIFA World Cup — click to expand"))}">
         <img src="${icon}" alt="">${live ? '<span class="wc-mini-live"></span>' : ""}
       </button>`;
   }

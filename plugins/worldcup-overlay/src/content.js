@@ -75,10 +75,11 @@
     }
   })();
 
-  // ---- apply non-content preferences (position, theme, site rules, etc.) ----
+  // ---- apply non-content preferences (position, theme, direction, site rules, etc.) ----
   function applyChrome() {
     root.classList.remove("wc-pos-tl", "wc-pos-tr", "wc-pos-bl", "wc-pos-br");
     root.classList.add("wc-pos-" + settings.corner);
+    if (WC.dir) root.setAttribute("dir", WC.dir()); // RTL locales mirror text/flow inside the widget
     const theme = WC.ui ? WC.ui.resolveTheme(settings.theme, darkMql ? darkMql.matches : false) : "dark";
     root.classList.remove("wc-theme-light", "wc-theme-dark");
     root.classList.add("wc-theme-" + theme);
