@@ -474,4 +474,49 @@
   animation: wc-pulse 1.1s ease-in-out infinite;
 }
 
+/* ---- score-change feedback: visually-hidden announcer + goal pulse ---- */
+/* aria-live region read by screen readers; explicit reset since all:initial wiped the defaults */
+#wc-overlay-root .wc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+#wc-overlay-root .wc-goalflash {
+  display: block;
+  padding: 6px 13px;
+  color: #06270f;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  background: #ffd23f;
+  animation: wc-goalin 0.25s ease-out;
+}
+#wc-overlay-root .wc-card.wc-goal .wc-score {
+  animation: wc-goalpulse 0.5s ease-out 2;
+}
+@keyframes wc-goalin {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wc-goalpulse {
+  0% { transform: scale(1); color: #ffd23f; }
+  50% { transform: scale(1.3); color: #ffd23f; }
+  100% { transform: scale(1); color: #ffffff; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #wc-overlay-root .wc-goalflash,
+  #wc-overlay-root .wc-card.wc-goal .wc-score {
+    animation: none;
+  }
+}
+
 #wc-overlay-root[hidden] { display: none; }

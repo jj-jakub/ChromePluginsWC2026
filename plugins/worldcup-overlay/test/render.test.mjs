@@ -250,6 +250,24 @@ test("card shows the table toggle only when canTable", () => {
   assert.doesNotMatch(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-tabletoggle/);
 });
 
+test("card pulses + announces when the shown match has a fresh score change", () => {
+  const deck = [m({ id: "x", matchMode: "live", hs: 2, as: 1 })];
+  const html = card(
+    { deck, cursor: 0, flash: { ids: ["x"], announce: "Goal — Brazil 2, Norway 1" }, icon: "i" },
+    NOW
+  );
+  assert.match(html, /wc-card wc-goal/);
+  assert.match(html, /GOAL!/);
+  assert.match(html, /aria-live="polite">Goal — Brazil 2, Norway 1/);
+});
+
+test("card has no goal pulse when the flashed id isn't the shown match", () => {
+  const deck = [m({ id: "x", matchMode: "live", hs: 0, as: 0 })];
+  const html = card({ deck, cursor: 0, flash: { ids: ["other"], announce: "" }, icon: "i" }, NOW);
+  assert.doesNotMatch(html, /wc-card wc-goal/);
+  assert.doesNotMatch(html, /GOAL!/);
+});
+
 test("mini shows the live indicator only when a live match is in the deck", () => {
   assert.match(mini({ deck: [m({ matchMode: "live" })], icon: "i.png" }), /wc-mini-live/);
   assert.doesNotMatch(mini({ deck: [m({ matchMode: "upcoming" })], icon: "i.png" }), /wc-mini-live/);

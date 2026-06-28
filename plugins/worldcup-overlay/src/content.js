@@ -43,6 +43,8 @@
   let standings = null; // { group, rows, partial, loading, error }
   let standingsSeq = 0; // recency token so a stale standings response can't clobber a fresher one
   let agendaMode = false; // showing the all-fixtures agenda list instead of a single match
+  let flash = null; // { ids:[matchId], announce } — a fresh score change to pulse + announce
+  let flashTimer = null;
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -104,7 +106,7 @@
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
         favorites: settings.favorites, favFilter, canFilter,
         mode: agendaMode ? "agenda" : tableMode ? "table" : "match",
-        standings, canTable: tableMode || !!currentGroup(),
+        standings, canTable: tableMode || !!currentGroup(), flash,
         icon: ICON,
       },
       now
@@ -256,11 +258,16 @@
     render();
   }
 
-  // Adopt new state, keeping the same match in view across refreshes when possible.
+  // Adopt new state, keeping the same match in view across refreshes when possible. Detects
+  // score changes vs the previous deck to flash a goal pulse + announce it to screen readers.
   function applyState(st) {
+    const oldDeck = deck;
+    const next = (st && st.matches) || [];
+    const changes = WC.scoreDiff ? WC.scoreDiff.diff(oldDeck, next) : [];
+
     const vdPrev = viewDeck();
     const prevId = cursor != null && vdPrev[cursor] ? vdPrev[cursor].id : null;
-    deck = (st && st.matches) || [];
+    deck = next;
     primaryIndex = (st && st.index) || 0;
     const vd = viewDeck();
     if (cursor == null) {
@@ -268,6 +275,18 @@
     } else {
       const keep = vd.findIndex((m) => m.id === prevId);
       cursor = keep >= 0 ? keep : clampPrimaryToView(vd);
+    }
+
+    if (changes.length) {
+      flash = {
+        ids: [...new Set(changes.map((c) => c.id))],
+        announce: WC.scoreDiff.announceFor(oldDeck, next),
+      };
+      clearTimeout(flashTimer);
+      flashTimer = setTimeout(() => {
+        flash = null;
+        render();
+      }, 6000);
     }
   }
 

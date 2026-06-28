@@ -223,13 +223,17 @@
     const {
       deck = [], fetchedAt, stale, refreshing, loadError, health,
       favorites = [], favFilter = false, canFilter = false,
-      mode = "match", standings = null, canTable = false, icon = "",
+      mode = "match", standings = null, canTable = false, flash = null, icon = "",
     } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
 
     const tableMode = mode === "table";
     const agendaMode = mode === "agenda";
+    const shownId = deck[cursor] && deck[cursor].id;
+    const pulsing =
+      !tableMode && !agendaMode && flash && flash.ids && shownId != null && flash.ids.indexOf(shownId) >= 0;
+    const announce = (flash && flash.announce) || "";
     const banner = healthBanner(health, now);
     let body;
     let nav = "";
@@ -271,8 +275,10 @@
       ? `<span class="wc-foot">Updated ${esc(ago(fetchedAt, now))}${stale ? " · offline" : ""} · TheSportsDB</span>`
       : "";
 
+    const goal = pulsing ? `<div class="wc-goalflash">⚽ GOAL!</div>` : "";
+
     return `
-      <div class="wc-card">
+      <div class="wc-card${pulsing ? " wc-goal" : ""}">
         <div class="wc-head">
           <span class="wc-dot"><img src="${icon}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
@@ -282,6 +288,8 @@
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
           <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
         </div>
+        <div class="wc-sr" role="status" aria-live="polite">${esc(announce)}</div>
+        ${goal}
         ${banner}
         <div class="wc-body">${body}</div>
         ${nav}
