@@ -67,10 +67,21 @@
   const cardHost = document.createElement("div");
   root.appendChild(cardHost);
 
-  // ---- apply non-content preferences (position, site rules, etc.) ----
+  const darkMql = (() => {
+    try {
+      return window.matchMedia("(prefers-color-scheme: dark)");
+    } catch (_) {
+      return null;
+    }
+  })();
+
+  // ---- apply non-content preferences (position, theme, site rules, etc.) ----
   function applyChrome() {
     root.classList.remove("wc-pos-tl", "wc-pos-tr", "wc-pos-bl", "wc-pos-br");
     root.classList.add("wc-pos-" + settings.corner);
+    const theme = WC.ui ? WC.ui.resolveTheme(settings.theme, darkMql ? darkMql.matches : false) : "dark";
+    root.classList.remove("wc-theme-light", "wc-theme-dark");
+    root.classList.add("wc-theme-" + theme);
   }
 
   // Per-site allow/deny: hide the whole widget where the user excluded it (no new permission —
@@ -368,6 +379,10 @@
     requestState();
     pollId = setInterval(requestState, POLL_MS);
     tickId = setInterval(render, TICK_MS);
+    try {
+      // Re-resolve the theme live when the OS scheme flips (only matters for "auto").
+      if (darkMql) darkMql.addEventListener("change", applyChrome);
+    } catch (_) {}
   }
 
   // React to settings edited in the options page (or the overlay's own ★ controls) while a tab is

@@ -217,14 +217,29 @@
     }
   }
 
-  // Load settings (for favorites / ★ state), then fetch and render.
+  const darkMql = (() => {
+    try {
+      return window.matchMedia("(prefers-color-scheme: dark)");
+    } catch (_) {
+      return null;
+    }
+  })();
+  function applyTheme() {
+    const theme = WC.ui ? WC.ui.resolveTheme(settings.theme, darkMql ? darkMql.matches : false) : "dark";
+    root.classList.remove("wc-theme-light", "wc-theme-dark");
+    root.classList.add("wc-theme-" + theme);
+  }
+
+  // Load settings (for favorites / ★ state + theme), then fetch and render.
   try {
     chrome.storage.sync.get(SETTINGS_KEY, (got) => {
       settings = self.WC.settings.normalize(got && got[SETTINGS_KEY]);
       favorites = settings.favorites;
+      applyTheme();
       render();
       requestState();
     });
+    if (darkMql) darkMql.addEventListener("change", applyTheme);
   } catch (_) {
     render();
     requestState();

@@ -519,4 +519,39 @@
   }
 }
 
+/* ---- light theme (default is the dark green above) ----
+   A single `* { color }` flip beats the per-element explicit whites (id + 2 classes wins on
+   specificity), then colored-background elements (live pill, chips, gold toggles) re-assert. */
+#wc-overlay-root.wc-theme-light .wc-card {
+  background: linear-gradient(160deg, #ffffff 0%, #eef3f0 100%);
+  color: #16271d;
+  border: 1px solid #d6e2db;
+  box-shadow: 0 8px 30px rgba(20, 40, 27, 0.18);
+}
+#wc-overlay-root.wc-theme-light .wc-card,
+#wc-overlay-root.wc-theme-light .wc-card * {
+  color: #16271d;
+}
+#wc-overlay-root.wc-theme-light .wc-head { background: rgba(10, 110, 54, 0.08); }
+#wc-overlay-root.wc-theme-light .wc-title { color: #0a6e36; }
+#wc-overlay-root.wc-theme-light .wc-status { background: rgba(10, 110, 54, 0.12); color: #0a6e36; }
+#wc-overlay-root.wc-theme-light .wc-status.live { background: #e11d2b; color: #ffffff; }
+#wc-overlay-root.wc-theme-light .wc-live-dot { background: #ffffff; }
+#wc-overlay-root.wc-theme-light .wc-team + .wc-team { border-top-color: rgba(20, 40, 27, 0.12); }
+#wc-overlay-root.wc-theme-light .wc-trow + .wc-trow { border-top-color: rgba(20, 40, 27, 0.1); }
+#wc-overlay-root.wc-theme-light .wc-icon:hover,
+#wc-overlay-root.wc-theme-light .wc-arrow,
+#wc-overlay-root.wc-theme-light .wc-arrow:hover,
+#wc-overlay-root.wc-theme-light .wc-agrow:hover,
+#wc-overlay-root.wc-theme-light .wc-cal { background: rgba(10, 110, 54, 0.12); }
+#wc-overlay-root.wc-theme-light .wc-chip { color: #ffffff; } /* keep white on the colored chip bg */
+#wc-overlay-root.wc-theme-light .wc-star.on,
+#wc-overlay-root.wc-theme-light .wc-favfilter.on,
+#wc-overlay-root.wc-theme-light .wc-tabletoggle.on { color: #d99e00; } /* gold readable on light */
+#wc-overlay-root.wc-theme-light .wc-yournext { color: #0a6e36; }
+#wc-overlay-root.wc-theme-light .wc-trow.q .wc-tpos { color: #1f9d55; }
+#wc-overlay-root.wc-theme-light .wc-goalflash { color: #06270f; } /* gold bg keeps dark text */
+#wc-overlay-root.wc-theme-light .wc-health { color: #5a3d00; }
+#wc-overlay-root.wc-theme-light .wc-health-down { color: #7a1a12; }
+
 #wc-overlay-root[hidden] { display: none; }

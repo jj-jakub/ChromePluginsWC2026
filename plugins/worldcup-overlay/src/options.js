@@ -16,6 +16,7 @@
     document.querySelectorAll('input[name="corner"]').forEach((r) => {
       r.checked = r.value === s.corner;
     });
+    $("theme").value = s.theme;
     $("startMinimized").checked = s.startMinimized;
     $("refreshMins").value = String(s.refreshMins);
     $("refreshOut").textContent = refreshLabel(s.refreshMins);
@@ -39,6 +40,7 @@
     return normalize({
       ...current,
       corner,
+      theme: $("theme").value,
       startMinimized: $("startMinimized").checked,
       refreshMins: Number($("refreshMins").value),
       siteMode: (document.querySelector('input[name="siteMode"]:checked') || {}).value,
@@ -103,7 +105,7 @@
   }
 
   const FIELDS =
-    'input[name="corner"], #startMinimized, #refreshMins, input[name="siteMode"], #siteRules, ' +
+    'input[name="corner"], #theme, #startMinimized, #refreshMins, input[name="siteMode"], #siteRules, ' +
     "#notifyEnabled, #notifyFavoritesOnly, #notifyKickoff, #notifyGoals, #notifyFullTime, #notifyLead";
   document.addEventListener("input", (e) => {
     if (e.target.matches(FIELDS)) onChange();

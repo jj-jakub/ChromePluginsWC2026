@@ -173,6 +173,17 @@ code {
   width: 150px;
   accent-color: var(--wc-green);
 }
+.select {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .range output {
   min-width: 84px;
   text-align: right;

@@ -39,6 +39,7 @@
         "src/ics.js",
         "src/score-diff.js",
         "src/site-match.js",
+        "src/ui-logic.js",
         "src/render.js",
         "src/content.js"
       ],
