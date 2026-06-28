@@ -53,6 +53,19 @@
   root.className = "wc-overlay";
   (document.body || document.documentElement).appendChild(root);
 
+  // Persistent visually-hidden live region — created ONCE and only its textContent is mutated, so
+  // screen readers reliably announce score changes (a region rebuilt via innerHTML each render is
+  // treated as initial content and not spoken). Lives at root level so it works minimized too.
+  const announcer = document.createElement("div");
+  announcer.className = "wc-sr";
+  announcer.setAttribute("role", "status");
+  announcer.setAttribute("aria-live", "polite");
+  root.appendChild(announcer);
+
+  // The card/mini markup is swapped into this host; the announcer above is never overwritten.
+  const cardHost = document.createElement("div");
+  root.appendChild(cardHost);
+
   // ---- apply non-content preferences (position, etc.) ----
   function applyChrome() {
     root.classList.remove("wc-pos-tl", "wc-pos-tr", "wc-pos-bl", "wc-pos-br");
@@ -87,8 +100,8 @@
   function render() {
     const now = Date.now();
     if (minimized) {
-      root.innerHTML = WC.render.mini({ deck, icon: ICON });
-      root.querySelector(".wc-mini").addEventListener("click", () => setMinimized(false));
+      cardHost.innerHTML = WC.render.mini({ deck, icon: ICON });
+      cardHost.querySelector(".wc-mini").addEventListener("click", () => setMinimized(false));
       return;
     }
     const canFilter = deck.some((m) => m.isFavorite);
@@ -101,7 +114,7 @@
     const vd = viewDeck();
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
 
-    root.innerHTML = WC.render.card(
+    cardHost.innerHTML = WC.render.card(
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
         favorites: settings.favorites, favFilter, canFilter,
@@ -278,13 +291,13 @@
     }
 
     if (changes.length) {
-      flash = {
-        ids: [...new Set(changes.map((c) => c.id))],
-        announce: WC.scoreDiff.announceFor(oldDeck, next),
-      };
+      flash = { ids: [...new Set(changes.map((c) => c.id))] };
+      // Mutate the persistent live region so screen readers announce it (works minimized too).
+      announcer.textContent = WC.scoreDiff.announceFor(oldDeck, next) || "";
       clearTimeout(flashTimer);
       flashTimer = setTimeout(() => {
         flash = null;
+        announcer.textContent = "";
         render();
       }, 6000);
     }

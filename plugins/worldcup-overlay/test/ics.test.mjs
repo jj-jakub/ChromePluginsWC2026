@@ -38,6 +38,14 @@ test("toICS drops matches without a kickoff and is deterministic (no Date.now)",
   assert.equal(toICS([m]), toICS([m])); // stable DTSTAMP from the earliest kickoff
 });
 
+test("toICS folds long content lines at 75 octets (RFC 5545 §3.1)", () => {
+  const longName = "Federated Republic of Verylongnationlandia and its Territories Overseas";
+  const ics = toICS([{ id: "1", home: longName, away: "Brazil", kickoffMs: Date.UTC(2026, 5, 27, 19) }]);
+  for (const line of ics.split("\r\n")) {
+    assert.ok(Buffer.byteLength(line, "utf8") <= 75, `line too long (${Buffer.byteLength(line, "utf8")}): ${line}`);
+  }
+});
+
 test("filenameFor builds a safe filename", () => {
   assert.equal(filenameFor(m), "wc-brazil-vs-norway.ics");
   assert.equal(filenameFor(null), "world-cup-fixtures.ics");

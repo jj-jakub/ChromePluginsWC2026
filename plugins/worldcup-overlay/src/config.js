@@ -38,6 +38,7 @@ export const SEASON = {
 export const NOTIFIED = {
   KEY: "wc_notified",
   MAX: 200,
+  RECENT_MS: 3 * 60 * 60 * 1000, // only notify live/score/full-time for matches kicked off within 3h
 };
 
 /** Background refresh alarm (chrome.alarms). PERIOD_MIN is the default when no user override. */

@@ -250,15 +250,11 @@ test("card shows the table toggle only when canTable", () => {
   assert.doesNotMatch(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-tabletoggle/);
 });
 
-test("card pulses + announces when the shown match has a fresh score change", () => {
+test("card pulses when the shown match has a fresh score change", () => {
   const deck = [m({ id: "x", matchMode: "live", hs: 2, as: 1 })];
-  const html = card(
-    { deck, cursor: 0, flash: { ids: ["x"], announce: "Goal — Brazil 2, Norway 1" }, icon: "i" },
-    NOW
-  );
+  const html = card({ deck, cursor: 0, flash: { ids: ["x"] }, icon: "i" }, NOW);
   assert.match(html, /wc-card wc-goal/);
   assert.match(html, /GOAL!/);
-  assert.match(html, /aria-live="polite">Goal — Brazil 2, Norway 1/);
 });
 
 test("card has no goal pulse when the flashed id isn't the shown match", () => {

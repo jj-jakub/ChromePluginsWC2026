@@ -233,7 +233,6 @@
     const shownId = deck[cursor] && deck[cursor].id;
     const pulsing =
       !tableMode && !agendaMode && flash && flash.ids && shownId != null && flash.ids.indexOf(shownId) >= 0;
-    const announce = (flash && flash.announce) || "";
     const banner = healthBanner(health, now);
     let body;
     let nav = "";
@@ -288,7 +287,6 @@
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>
           <span class="wc-icon wc-min" title="Minimize" aria-label="Minimize">–</span>
         </div>
-        <div class="wc-sr" role="status" aria-live="polite">${esc(announce)}</div>
         ${goal}
         ${banner}
         <div class="wc-body">${body}</div>

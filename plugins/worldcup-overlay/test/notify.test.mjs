@@ -27,6 +27,21 @@ test("went-live + score (score-stamped tag) + full-time fire", () => {
   assert.ok(notificationsFor(ft, NOW, [], prefs).some((n) => n.tag === "ft-1"));
 });
 
+test("recentMs gates live/score/full-time to recently-kicked-off matches (no stale burst)", () => {
+  const fresh = { id: "1", matchMode: "result", home: "A", away: "B", homeScore: 1, awayScore: 0, kickoffMs: NOW - 60 * 60000 }; // 1h ago
+  const stale = { id: "2", matchMode: "result", home: "C", away: "D", homeScore: 1, awayScore: 0, kickoffMs: NOW - 30 * 60 * 60000 }; // 30h ago
+  const tags = notificationsFor([fresh, stale], NOW, [], prefs, { recentMs: 3 * 60 * 60000 }).map((n) => n.tag);
+  assert.ok(tags.includes("ft-1"));
+  assert.ok(!tags.includes("ft-2"));
+});
+
+test("extraLeadMs widens the kickoff window by the refresh cadence", () => {
+  const m = { id: "1", matchMode: "upcoming", home: "A", away: "B", kickoffMs: NOW + 20 * 60000 }; // 20m out
+  const p = { ...prefs, leadMins: 15 };
+  assert.equal(notificationsFor([m], NOW, [], p).some((n) => n.tag === "ko-1"), false); // 20m > 15m lead
+  assert.equal(notificationsFor([m], NOW, [], p, { extraLeadMs: 10 * 60000 }).some((n) => n.tag === "ko-1"), true); // window now 25m
+});
+
 test("favorites-only filters to followed nations", () => {
   const deck = [
     { id: "1", matchMode: "live", home: "Brazil", away: "Norway", homeScore: 1, awayScore: 0 },

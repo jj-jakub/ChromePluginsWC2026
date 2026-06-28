@@ -25,6 +25,30 @@
     );
   }
 
+  // Fold a content line at 75 octets per RFC 5545 §3.1 (CRLF + single space continuation),
+  // counting UTF-8 octets and never splitting a multi-byte codepoint.
+  const enc = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+  function fold(line) {
+    if (!enc || enc.encode(line).length <= 75) return line;
+    const parts = [];
+    let cur = "";
+    let bytes = 0;
+    for (const ch of line) {
+      const b = enc.encode(ch).length;
+      const budget = parts.length === 0 ? 75 : 74; // continuations carry a 1-octet leading space
+      if (bytes + b > budget) {
+        parts.push(cur);
+        cur = ch;
+        bytes = b;
+      } else {
+        cur += ch;
+        bytes += b;
+      }
+    }
+    parts.push(cur);
+    return parts.join("\r\n ");
+  }
+
   // Escape per RFC 5545 §3.3.11 (backslash, comma, semicolon, newline).
   function esc(text) {
     return String(text == null ? "" : text)
@@ -77,7 +101,7 @@
     ];
     for (const m of list) lines.push(...vevent(m, stampMs));
     lines.push("END:VCALENDAR");
-    return lines.join("\r\n") + "\r\n";
+    return lines.map(fold).join("\r\n") + "\r\n";
   }
 
   /** A safe-ish filename for a download. */

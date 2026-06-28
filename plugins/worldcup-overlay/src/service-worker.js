@@ -130,7 +130,12 @@ async function fireNotifications(decorated) {
   const prefs = await readNotifyPrefs();
   if (!prefs.enabled) return;
   const favorites = await readFavorites();
-  const candidates = notificationsFor(decorated.matches, Date.now(), favorites, prefs);
+  // Widen the kickoff window by the refresh cadence (so the last refresh before kickoff fires it),
+  // and gate live/score/full-time to recently-kicked-off matches so opting in doesn't burst stale
+  // "Full time" alerts for matches in the past-results window.
+  const extraLeadMs = (await refreshMinutes()) * 60000;
+  const opts = { extraLeadMs, recentMs: NOTIFIED.RECENT_MS };
+  const candidates = notificationsFor(decorated.matches, Date.now(), favorites, prefs, opts);
   if (!candidates.length) return;
 
   let firedArr = [];
@@ -145,12 +150,15 @@ async function fireNotifications(decorated) {
 
   for (const c of fresh) {
     try {
-      chrome.notifications.create(c.tag, {
-        type: "basic",
-        iconUrl: chrome.runtime.getURL("icons/icon128.png"),
-        title: c.title,
-        message: c.message,
-      });
+      // create() returns a Promise in MV3 — attach .catch (a sync try/catch can't catch a rejection).
+      Promise.resolve(
+        chrome.notifications.create(c.tag, {
+          type: "basic",
+          iconUrl: chrome.runtime.getURL("icons/icon128.png"),
+          title: c.title,
+          message: c.message,
+        })
+      ).catch(() => {});
     } catch (_) {}
     fired.add(c.tag);
   }
