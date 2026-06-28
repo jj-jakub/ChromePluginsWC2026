@@ -9,21 +9,33 @@
 const TEAMS_PER_GROUP = 4;
 const MATCHES_PER_GROUP = (TEAMS_PER_GROUP * (TEAMS_PER_GROUP - 1)) / 2; // round-robin = 6
 
+const teamKey = (s) => String(s || "").trim().toLowerCase();
+
 function blankRow(team) {
   return { team, played: 0, win: 0, draw: 0, loss: 0, gf: 0, ga: 0 };
 }
 
-/** Build a sorted table from a set of finished matches that all belong to one group. */
-function tableFromMatches(matches) {
+/**
+ * Build a sorted table from ALL of a group's events (finished or not). Every team in the group
+ * gets a row (so the full roster shows, with 0s for teams yet to play); only finished matches
+ * with both scores contribute to the stats. Teams are keyed case-insensitively so the same nation
+ * never splits into two rows (matching form.js / favorites identity). `qualifying` is only flagged
+ * once the group is complete (all matches played) — a partial table makes no qualification claim.
+ */
+function tableFromMatches(groupEvents) {
   const teams = new Map();
   const get = (name) => {
-    if (!teams.has(name)) teams.set(name, blankRow(name));
-    return teams.get(name);
+    const id = teamKey(name);
+    if (!teams.has(id)) teams.set(id, blankRow(name));
+    return teams.get(id);
   };
 
-  for (const m of matches) {
-    const h = get(m.home);
+  let finished = 0;
+  for (const m of groupEvents) {
+    const h = get(m.home); // register both teams even for unplayed fixtures (full roster)
     const a = get(m.away);
+    if (m.phase !== "finished" || m.homeScore == null || m.awayScore == null) continue;
+    finished++;
     const hs = m.homeScore;
     const as = m.awayScore;
     h.played++;
@@ -58,15 +70,17 @@ function tableFromMatches(matches) {
       a.team.localeCompare(b.team)
   );
 
+  const complete = finished >= MATCHES_PER_GROUP;
   rows.forEach((r, i) => {
-    r.qualifying = i < 2; // top two advance
+    r.qualifying = complete && i < 2; // only claim qualification once the group is decided
   });
   return rows;
 }
 
 /**
- * Standings for every group present in `events`, keyed by group name. Only finished matches with
- * both scores count; non-group (knockout) matches are ignored.
+ * Standings for every group present in `events`, keyed by group name. Every team that appears in
+ * a group's fixtures gets a row; only finished matches with both scores count toward the stats.
+ * Non-group (knockout) matches are ignored.
  * @returns {Record<string, Array>} group name -> sorted rows
  */
 export function computeStandings(events) {
@@ -74,9 +88,7 @@ export function computeStandings(events) {
   for (const e of events || []) {
     const g = (e.group || "").trim();
     if (!g) continue;
-    if (e.phase !== "finished") continue;
-    if (e.homeScore == null || e.awayScore == null) continue;
-    (byGroup[g] = byGroup[g] || []).push(e);
+    (byGroup[g] = byGroup[g] || []).push(e); // all group events — finished or not
   }
   const out = {};
   for (const g of Object.keys(byGroup)) out[g] = tableFromMatches(byGroup[g]);

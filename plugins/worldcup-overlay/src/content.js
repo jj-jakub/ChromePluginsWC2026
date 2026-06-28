@@ -41,6 +41,7 @@
   let tableMode = false; // showing the group standings table instead of the match
   let tableGroup = ""; // the group currently shown in the table
   let standings = null; // { group, rows, partial, loading, error }
+  let standingsSeq = 0; // recency token so a stale standings response can't clobber a fresher one
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -88,7 +89,12 @@
       return;
     }
     const canFilter = deck.some((m) => m.isFavorite);
-    if (!canFilter) favFilter = false; // nothing to filter to
+    // If the filter is on but nothing is left to filter to, drop it and re-anchor to the primary
+    // (cursor=null lets the clamp below pick clampPrimaryToView(full deck), not stale index 0).
+    if (!canFilter && favFilter) {
+      favFilter = false;
+      cursor = null;
+    }
     const vd = viewDeck();
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
 
@@ -178,17 +184,20 @@
       stopLoops();
       return;
     }
+    const seq = ++standingsSeq;
+    if (force) {
+      refreshing = true; // spin the ↻ and make the re-click guard effective in table mode
+      render();
+    }
     try {
       chrome.runtime.sendMessage({ type: MSG_GET_STANDINGS, group, force: !!force }, (resp) => {
-        if (!tableMode || group !== tableGroup) return; // user already switched away
-        if (chrome.runtime.lastError || !resp) {
-          standings = { group, error: true, rows: [] };
-        } else {
-          standings = resp;
-        }
+        if (force) refreshing = false;
+        if (seq !== standingsSeq || !tableMode || group !== tableGroup) return; // stale / switched away
+        standings = chrome.runtime.lastError || !resp ? { group, error: true, rows: [] } : resp;
         render();
       });
     } catch (_) {
+      if (force) refreshing = false;
       standings = { group, error: true, rows: [] };
       render();
     }

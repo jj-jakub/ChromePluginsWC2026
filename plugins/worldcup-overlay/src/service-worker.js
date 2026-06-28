@@ -84,10 +84,16 @@ async function decorate(baseState, now) {
   const favorites = await readFavorites();
   const { matches, index } = applyFavorites(baseState.matches, now, favorites, baseState.index);
   const season = await readSeasonCacheEvents();
-  const withForm =
-    season && season.length
-      ? matches.map((m) => ({ ...m, homeForm: teamForm(season, m.home), awayForm: teamForm(season, m.away) }))
-      : matches;
+  if (!season || !season.length) return { matches, index, updatedAt: baseState.updatedAt };
+
+  // Compute each distinct nation's form once (a team recurs across the deck's fixtures).
+  const formCache = new Map();
+  const formOf = (team) => {
+    const k = String(team || "").trim().toLowerCase();
+    if (!formCache.has(k)) formCache.set(k, teamForm(season, team));
+    return formCache.get(k);
+  };
+  const withForm = matches.map((m) => ({ ...m, homeForm: formOf(m.home), awayForm: formOf(m.away) }));
   return { matches: withForm, index, updatedAt: baseState.updatedAt };
 }
 
@@ -101,17 +107,44 @@ async function readSeasonCache() {
   }
 }
 
+let seasonInFlight = null; // de-dupes concurrent season fetches (mirrors `inFlight` for the deck)
+let seasonInFlightForce = false;
+
 async function getSeasonEvents(force) {
   const cached = await readSeasonCache();
   if (!force && cached && Date.now() - cached.fetchedAt < SEASON.TTL_MS) return cached.events;
-  try {
-    const events = await fetchSeason();
+
+  // Reuse an in-flight fetch unless this caller forces and the running one didn't.
+  if (seasonInFlight && (seasonInFlightForce || !force)) return seasonInFlight;
+
+  // Non-force fetches honor the same backoff window the deck path respects — the season endpoint
+  // is the heaviest, so don't hammer a flaky provider that's already in backoff.
+  if (!force) {
+    const health = await readHealth();
+    if (health.nextRetryAt && Date.now() < health.nextRetryAt) return cached ? cached.events : null;
+  }
+
+  const run = (async () => {
     try {
-      await chrome.storage.local.set({ [SEASON.CACHE_KEY]: { events, fetchedAt: Date.now() } });
-    } catch (_) {}
-    return events;
-  } catch (_) {
-    return cached ? cached.events : null; // null => couldn't load and no cache
+      const events = await fetchSeason();
+      try {
+        await chrome.storage.local.set({ [SEASON.CACHE_KEY]: { events, fetchedAt: Date.now() } });
+      } catch (_) {}
+      return events;
+    } catch (_) {
+      return cached ? cached.events : null; // null => couldn't load and no cache
+    }
+  })();
+
+  seasonInFlight = run;
+  seasonInFlightForce = !!force;
+  try {
+    return await run;
+  } finally {
+    if (seasonInFlight === run) {
+      seasonInFlight = null;
+      seasonInFlightForce = false;
+    }
   }
 }
 

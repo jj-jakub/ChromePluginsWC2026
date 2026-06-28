@@ -25,6 +25,7 @@
   let tableMode = false;
   let tableGroup = "";
   let standings = null;
+  let standingsSeq = 0;
 
   function viewDeck() {
     return favFilter ? deck.filter((m) => m.isFavorite) : deck;
@@ -46,7 +47,7 @@
   function render() {
     const now = Date.now();
     const canFilter = deck.some((m) => m.isFavorite);
-    if (!canFilter) favFilter = false;
+    if (!canFilter && favFilter) { favFilter = false; cursor = null; } // re-anchor to primary
     const vd = viewDeck();
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
 
@@ -94,13 +95,20 @@
   }
 
   function requestStandings(group, force) {
+    const seq = ++standingsSeq;
+    if (force) {
+      refreshing = true; // spin the ↻ and make the re-click guard effective in table mode
+      render();
+    }
     try {
       chrome.runtime.sendMessage({ type: MSG_GET_STANDINGS, group, force: !!force }, (resp) => {
-        if (!tableMode || group !== tableGroup) return;
+        if (force) refreshing = false;
+        if (seq !== standingsSeq || !tableMode || group !== tableGroup) return;
         standings = chrome.runtime.lastError || !resp ? { group, error: true, rows: [] } : resp;
         render();
       });
     } catch (_) {
+      if (force) refreshing = false;
       standings = { group, error: true, rows: [] };
       render();
     }
@@ -114,9 +122,17 @@
   }
 
   function applyState(st) {
+    const vdPrev = viewDeck();
+    const prevId = cursor != null && vdPrev[cursor] ? vdPrev[cursor].id : null;
     deck = (st && st.matches) || [];
     primaryIndex = (st && st.index) || 0;
-    cursor = clampPrimaryToView(viewDeck());
+    const vd = viewDeck();
+    if (cursor == null) {
+      cursor = clampPrimaryToView(vd);
+    } else {
+      const keep = vd.findIndex((m) => m.id === prevId);
+      cursor = keep >= 0 ? keep : clampPrimaryToView(vd);
+    }
   }
 
   function toggleFavorite(team) {
@@ -126,11 +142,17 @@
     const i = favs.findIndex((f) => f.trim().toLowerCase() === k);
     if (i >= 0) favs.splice(i, 1);
     else favs.push(team);
-    favorites = favs; // optimistic; persisted below (merged onto full settings), then re-ranked
-    settings = self.WC.settings.normalize({ ...settings, favorites: favs });
+    favorites = favs; // optimistic for the star fill
     render();
+    // Re-read settings right before writing so a concurrent edit (options page / cross-device sync)
+    // isn't clobbered by this popup's open-time snapshot.
     try {
-      chrome.storage.sync.set({ [SETTINGS_KEY]: settings }, () => requestState());
+      chrome.storage.sync.get(SETTINGS_KEY, (got) => {
+        const cur = self.WC.settings.normalize(got && got[SETTINGS_KEY]);
+        settings = self.WC.settings.normalize({ ...cur, favorites: favs });
+        favorites = settings.favorites;
+        chrome.storage.sync.set({ [SETTINGS_KEY]: settings }, () => requestState());
+      });
     } catch (_) {}
   }
 

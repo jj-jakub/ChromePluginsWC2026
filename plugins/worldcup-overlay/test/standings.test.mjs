@@ -77,6 +77,24 @@ test("finishedCount counts only finished group matches with scores", () => {
   assert.equal(finishedCount(events, ""), 0);
 });
 
+test("computeStandings shows the full roster and withholds qualifying until complete", () => {
+  const events = [
+    m("A", "B", 1, 0), // finished
+    { home: "C", away: "D", homeScore: null, awayScore: null, group: "Group A", phase: "scheduled" },
+  ];
+  const rows = computeStandings(events)["Group A"];
+  assert.equal(rows.length, 4); // A, B, C, D all present even though C/D haven't played
+  assert.ok(rows.every((r) => r.qualifying === false)); // partial group -> no qualification claim
+  assert.equal(rows.find((r) => r.team === "C").played, 0); // unplayed team shows zeros
+});
+
+test("computeStandings keys teams case-insensitively (no split rows)", () => {
+  const events = [m("Brazil", "Norway", 1, 0), m("brazil", "Spain", 2, 0)];
+  const merged = computeStandings(events)["Group A"].filter((r) => r.team.toLowerCase() === "brazil");
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].played, 2);
+});
+
 test("computeStandings never throws on empty/garbage input", () => {
   assert.deepEqual(computeStandings(null), {});
   assert.deepEqual(computeStandings([]), {});
