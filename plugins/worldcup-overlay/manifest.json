@@ -41,6 +41,7 @@
         "src/site-match.js",
         "src/ui-logic.js",
         "src/keymap.js",
+        "src/position.js",
         "src/render.js",
         "src/content.js"
       ],

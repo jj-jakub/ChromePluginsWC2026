@@ -52,6 +52,8 @@
   gap: 8px;
   padding: 9px 11px;
   background: rgba(0, 0, 0, 0.22);
+  cursor: move; /* drag the header to reposition */
+  touch-action: none; /* let pointermove drive the drag instead of scrolling */
 }
 
 #wc-overlay-root .wc-dot { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }

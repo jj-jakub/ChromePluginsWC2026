@@ -371,6 +371,76 @@
     }
   }
 
+  // Drag-to-reposition: grab the header (or the mini ball) to move the widget; on release it snaps
+  // to the nearest corner and persists. A small move threshold keeps header-button taps working.
+  let drag = null;
+  let justDragged = false;
+  const DRAG_THRESHOLD = 5;
+
+  function onPointerDown(e) {
+    if (blocked || e.button != null && e.button !== 0) return;
+    const fromHead = e.target.closest(".wc-head") && !e.target.closest("button");
+    const fromMini = !!e.target.closest(".wc-mini");
+    if (!fromHead && !fromMini) return;
+    const rect = root.getBoundingClientRect();
+    drag = { startX: e.clientX, startY: e.clientY, offX: e.clientX - rect.left, offY: e.clientY - rect.top, w: rect.width, h: rect.height, moved: false };
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp, { once: true });
+  }
+
+  function onPointerMove(e) {
+    if (!drag) return;
+    if (!drag.moved && Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) < DRAG_THRESHOLD) return;
+    drag.moved = true;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const raw = { x: e.clientX - drag.offX, y: e.clientY - drag.offY, w: drag.w, h: drag.h, vw, vh };
+    const pos = WC.position ? WC.position.clampToViewport(raw, 4) : raw;
+    root.classList.remove("wc-pos-tl", "wc-pos-tr", "wc-pos-bl", "wc-pos-br");
+    root.style.top = pos.y + "px";
+    root.style.left = pos.x + "px";
+    root.style.right = "auto";
+    root.style.bottom = "auto";
+  }
+
+  function onPointerUp() {
+    window.removeEventListener("pointermove", onPointerMove);
+    if (!drag) return;
+    if (drag.moved) {
+      const rect = root.getBoundingClientRect();
+      const corner = WC.position
+        ? WC.position.nearestCorner({ x: rect.left, y: rect.top, w: rect.width, h: rect.height, vw: window.innerWidth, vh: window.innerHeight })
+        : settings.corner;
+      root.style.top = root.style.left = root.style.right = root.style.bottom = "";
+      settings = settingsApi.normalize({ ...settings, corner });
+      applyChrome();
+      try {
+        chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
+      } catch (_) {}
+      justDragged = true; // swallow the click that fires right after a drag
+      setTimeout(() => {
+        justDragged = false;
+      }, 60);
+    }
+    drag = null;
+  }
+
+  function setupDrag() {
+    root.addEventListener("pointerdown", onPointerDown);
+    // A click immediately follows a drag's pointerup — suppress it so dragging the ball/header
+    // doesn't also expand/minimize/toggle.
+    root.addEventListener(
+      "click",
+      (e) => {
+        if (justDragged) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      },
+      true
+    );
+  }
+
   // Keyboard control — the listener lives on the persistent root, so it survives re-renders and
   // only fires when focus is inside the widget (so it never hijacks page typing/shortcuts).
   function focusSel(sel) {
@@ -407,6 +477,7 @@
   function start() {
     evalSite();
     setupKeyboard();
+    setupDrag();
     applyChrome();
     render();
     requestState();
