@@ -79,13 +79,17 @@
     }
     if (m.matchMode === "upcoming") {
       const when = ko ? `${esc(dayLabel(ko, now))} ${esc(clock(ko))} · ${esc(until(ko, now))}` : "Scheduled";
+      const cal = ko
+        ? `<button class="wc-cal" data-id="${esc(m.id)}" title="Add to calendar" aria-label="Add to calendar">＋ Calendar</button>`
+        : "";
       return `
         <span class="wc-status upcoming">Up next</span>
         ${round}
         <div class="wc-teams">${teamRow(m.home, null, false, fH)}${teamRow(m.away, null, false, fA)}</div>
         ${form}
         <span class="wc-meta">${when}</span>
-        ${venue}`;
+        ${venue}
+        ${cal}`;
     }
     // result
     const { homeScore: hs, awayScore: as } = m;

@@ -36,6 +36,7 @@
         "src/flags.js",
         "src/settings.js",
         "src/agenda.js",
+        "src/ics.js",
         "src/render.js",
         "src/content.js"
       ],

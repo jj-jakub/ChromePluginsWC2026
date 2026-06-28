@@ -136,6 +136,8 @@
     root.querySelectorAll(".wc-agrow").forEach((b) =>
       b.addEventListener("click", () => jumpToMatch(b.dataset.id))
     );
+    const cal = root.querySelector(".wc-cal");
+    if (cal) cal.addEventListener("click", () => downloadIcs(cal.dataset.id));
   }
 
   // ---- actions ----
@@ -203,6 +205,21 @@
     const i = vd.findIndex((mm) => String(mm.id) === String(id));
     if (i >= 0) cursor = i;
     render();
+  }
+
+  // "Add to calendar" -> download a .ics for the match via a data: anchor (no permission needed).
+  function downloadIcs(id) {
+    const match = deck.find((mm) => String(mm.id) === String(id));
+    if (!match || !WC.ics) return;
+    try {
+      const text = WC.ics.toICS([match], { stampMs: Date.now() });
+      const a = document.createElement("a");
+      a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(text);
+      a.download = WC.ics.filenameFor(match);
+      (document.body || document.documentElement).appendChild(a);
+      a.click();
+      a.remove();
+    } catch (_) {}
   }
 
   function requestStandings(group, force) {

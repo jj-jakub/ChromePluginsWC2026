@@ -6,6 +6,7 @@ globalThis.self = globalThis;
 await import(new URL("../src/format.js", import.meta.url));
 await import(new URL("../src/flags.js", import.meta.url));
 await import(new URL("../src/agenda.js", import.meta.url));
+await import(new URL("../src/ics.js", import.meta.url));
 await import(new URL("../src/render.js", import.meta.url));
 const { card, mini, matchBody, teamRow } = globalThis.WC.render;
 
@@ -42,6 +43,11 @@ test("matchBody renders an upcoming match with countdown, no scores", () => {
   assert.match(html, /Up next/);
   assert.match(html, /in 2h 0m/);
   assert.doesNotMatch(html, /wc-score">\d/); // no numeric score shown
+});
+
+test("matchBody shows an Add-to-calendar button only on upcoming matches", () => {
+  assert.match(matchBody(m({ matchMode: "upcoming", ko: NOW + H }), NOW), /wc-cal[^]*data-id="1"/);
+  assert.doesNotMatch(matchBody(m({ matchMode: "result", hs: 1, as: 0, ko: NOW - H }), NOW), /wc-cal/);
 });
 
 test("matchBody marks the winner of a finished result", () => {
