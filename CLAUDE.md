@@ -36,16 +36,17 @@ src/
   standings.js       PURE: computeStandings / tableFor — group tables from finished results (FIFA tiebreakers, top-2 qualify)
   form.js            PURE: teamForm — a nation's recent W/D/L + GF/GA from finished season events
   ── content scripts (classic; share one self.WC namespace, loaded in this order before content.js) ──
-  format.js          self.WC.fmt — esc / clock / dayLabel / until / ago
+  format.js          self.WC.fmt — esc / clock / dayLabel / until / ago / roundLabel / liveMinute
   flags.js           self.WC.flag — country → emoji flag
   settings.js        self.WC.settings — PURE DEFAULTS + normalize() gatekeeper for chrome.storage.sync
-  render.js          self.WC.render — PURE HTML builders (card / mini / matchBody); reused by the popup
+  agenda.js          self.WC.agenda — PURE groupByDay (all-fixtures list grouped by day)
+  render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda); reused by the popup
   content.js         inject isolated widget, read settings, render the deck, rotate / refresh / minimize
   content.css        scoped styles (+ .wc-pos-* corner classes)
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
-test/                node --test (86 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form
+test/                node --test (96 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form, agenda
 ```
 
 ## Key decisions (this is why things are the way they are)

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 globalThis.self = globalThis;
 await import(new URL("../src/format.js", import.meta.url));
 await import(new URL("../src/flags.js", import.meta.url));
+await import(new URL("../src/agenda.js", import.meta.url));
 await import(new URL("../src/render.js", import.meta.url));
 const { card, mini, matchBody, teamRow } = globalThis.WC.render;
 
@@ -218,6 +219,24 @@ test("card table mode shows loading and a partial note", () => {
     NOW
   );
   assert.match(partial, /Partial table/);
+});
+
+test("card in agenda mode lists fixtures grouped by day and offers the agenda toggle", () => {
+  const deck = [
+    m({ id: "a", matchMode: "result", hs: 2, as: 1, ko: NOW - H }),
+    m({ id: "b", matchMode: "upcoming", ko: NOW + H }),
+  ];
+  const html = card({ deck, cursor: 0, mode: "agenda", icon: "i.png" }, NOW);
+  assert.match(html, /wc-agenda/);
+  assert.match(html, /wc-agendatoggle on/);
+  assert.match(html, /wc-agrow[^]*data-id="a"/);
+  assert.match(html, /wc-agrow[^]*data-id="b"/);
+  assert.doesNotMatch(html, /wc-nav/); // no single-match nav in agenda mode
+});
+
+test("card offers the agenda toggle whenever there's a non-empty deck", () => {
+  assert.match(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-agendatoggle/);
+  assert.doesNotMatch(card({ deck: [], icon: "i" }, NOW), /wc-agendatoggle/);
 });
 
 test("card shows the table toggle only when canTable", () => {

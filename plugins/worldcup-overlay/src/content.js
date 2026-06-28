@@ -42,6 +42,7 @@
   let tableGroup = ""; // the group currently shown in the table
   let standings = null; // { group, rows, partial, loading, error }
   let standingsSeq = 0; // recency token so a stale standings response can't clobber a fresher one
+  let agendaMode = false; // showing the all-fixtures agenda list instead of a single match
   let pollId = null; // setInterval ids, so we can stop polling a dead context
   let tickId = null;
 
@@ -102,7 +103,8 @@
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
         favorites: settings.favorites, favFilter, canFilter,
-        mode: tableMode ? "table" : "match", standings, canTable: tableMode || !!currentGroup(),
+        mode: agendaMode ? "agenda" : tableMode ? "table" : "match",
+        standings, canTable: tableMode || !!currentGroup(),
         icon: ICON,
       },
       now
@@ -129,6 +131,11 @@
     if (favBtn) favBtn.addEventListener("click", () => toggleFavFilter());
     const tableBtn = root.querySelector(".wc-tabletoggle");
     if (tableBtn) tableBtn.addEventListener("click", () => toggleTable());
+    const agendaBtn = root.querySelector(".wc-agendatoggle");
+    if (agendaBtn) agendaBtn.addEventListener("click", () => toggleAgenda());
+    root.querySelectorAll(".wc-agrow").forEach((b) =>
+      b.addEventListener("click", () => jumpToMatch(b.dataset.id))
+    );
   }
 
   // ---- actions ----
@@ -172,11 +179,30 @@
     }
     const group = currentGroup();
     if (!group) return;
+    agendaMode = false; // the two full-screen modes are mutually exclusive
     tableMode = true;
     tableGroup = group;
     standings = { group, loading: true };
     render();
     requestStandings(group);
+  }
+
+  function toggleAgenda() {
+    agendaMode = !agendaMode;
+    if (agendaMode) {
+      tableMode = false; // mutually exclusive with the table
+      standings = null;
+    }
+    render();
+  }
+
+  // Click an agenda row -> jump back to that match in the single-match view.
+  function jumpToMatch(id) {
+    agendaMode = false;
+    const vd = viewDeck();
+    const i = vd.findIndex((mm) => String(mm.id) === String(id));
+    if (i >= 0) cursor = i;
+    render();
   }
 
   function requestStandings(group, force) {

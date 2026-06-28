@@ -148,6 +148,40 @@
     return `<div class="wc-table">${head}${rows}${note}</div>`;
   }
 
+  // One fixture row in the agenda list; clicking it jumps to that match (data-id).
+  function agendaRow(m) {
+    const live = m.matchMode === "live";
+    const t = live ? "LIVE" : m.kickoffMs ? clock(m.kickoffMs) : "";
+    const hf = flagOf(m.home);
+    const af = flagOf(m.away);
+    let mid;
+    if (m.matchMode === "upcoming") {
+      mid = "v";
+    } else {
+      const h = m.homeScore == null ? "" : esc(m.homeScore);
+      const a = m.awayScore == null ? "" : esc(m.awayScore);
+      mid = `${h}-${a}`;
+    }
+    return `<button class="wc-agrow${live ? " live" : ""}" data-id="${esc(m.id)}" title="Show this match">
+        <span class="wc-agtime">${esc(t)}</span>
+        <span class="wc-agteams">${hf ? `<span class="wc-flag">${hf}</span>` : ""}<span class="wc-agname">${esc(m.home)}</span><b class="wc-agscore">${mid}</b><span class="wc-agname">${esc(m.away)}</span>${af ? `<span class="wc-flag">${af}</span>` : ""}</span>
+      </button>`;
+  }
+
+  /** Agenda list body: every fixture grouped under day headers. */
+  function agendaBody(deck, now) {
+    if (!deck.length) return `<div class="wc-empty">No matches in the schedule.</div>`;
+    const groups =
+      WC.agenda && WC.agenda.groupByDay ? WC.agenda.groupByDay(deck, now) : [{ label: "", matches: deck }];
+    return (
+      `<div class="wc-agenda">` +
+      groups
+        .map((g) => `<div class="wc-agday">${esc(g.label)}</div>` + g.matches.map(agendaRow).join(""))
+        .join("") +
+      `</div>`
+    );
+  }
+
   /** "in 4m" / "in 1h 2m" / "shortly" — for the data-health retry copy. */
   function retryPhrase(nextRetryAt, now) {
     if (!nextRetryAt || nextRetryAt <= now) return "shortly";
@@ -191,11 +225,14 @@
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
 
     const tableMode = mode === "table";
+    const agendaMode = mode === "agenda";
     const banner = healthBanner(health, now);
     let body;
     let nav = "";
     if (tableMode) {
       body = standingsBody(standings);
+    } else if (agendaMode) {
+      body = agendaBody(deck, now);
     } else if (loadError) {
       body = `<div class="wc-empty">Couldn't load World Cup data.</div>`;
     } else if (!deck.length) {
@@ -214,14 +251,17 @@
       }
     }
 
-    const tableBtn = canTable
-      ? `<span class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">☰</span>`
+    const agendaBtn = !loadError && deck.length
+      ? `<span class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? "Show match" : "All fixtures"}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</span>`
       : "";
-    const favBtn = canFilter && !tableMode
+    const tableBtn = canTable
+      ? `<span class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? "Show match" : "Group table"}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</span>`
+      : "";
+    const favBtn = canFilter && !tableMode && !agendaMode
       ? `<span class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? "Show all matches" : "Show favorites only"}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</span>`
       : "";
 
-    const yourNext = !tableMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
+    const yourNext = !tableMode && !agendaMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
 
     const foot = fetchedAt
       ? `<span class="wc-foot">Updated ${esc(ago(fetchedAt, now))}${stale ? " · offline" : ""} · TheSportsDB</span>`
@@ -232,6 +272,7 @@
         <div class="wc-head">
           <span class="wc-dot"><img src="${icon}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
+          ${agendaBtn}
           ${tableBtn}
           ${favBtn}
           <span class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="Refresh now" aria-label="Refresh">↻</span>

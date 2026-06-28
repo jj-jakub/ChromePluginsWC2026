@@ -35,9 +35,9 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 - [ ] _Fast-follow:_ favorites management section on the options page (overlay/popup ★ covers it for now).
 
 ## Commit 4 — Match depth
-- [ ] **Per-match details** — `roundLabel(round, stage)` in `format.js` (Matchday N / Round of 16 / QF / SF / Final); chevron details strip.
-- [ ] **Today's agenda / list mode** — pure `agenda.js` `groupByDay`; scrollable day-grouped list toggle.
-- [ ] **Estimated live minute** — pure `estimatedMinute(ev, now)` (HT gap, cap 90+, `~` prefix, yields to provider progress).
+- [x] **Per-match details** — `roundLabel(round, stage, group)` in `format.js` (Matchday N / Round of 16 / QF / SF / Final); a round caption under the status pill.
+- [x] **Today's agenda / list mode** — pure `agenda.js` `groupByDay`; ☰ toggle to a scrollable day-grouped fixtures list; tap a row to jump to that match (overlay + popup).
+- [x] **Estimated live minute** — pure `liveMinute(kickoffMs, now)` in `format.js` (HT gap, cap 90+, `~` prefix, yields to provider progress).
 
 ## Commit 5 — Glanceable & actionable
 - [ ] **Score-change feedback** — pure `score-diff.js` (`diff`/`announceFor`); GOAL pulse + visually-hidden `aria-live` region (reduced-motion-safe).

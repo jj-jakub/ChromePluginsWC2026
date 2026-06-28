@@ -307,6 +307,60 @@
 }
 #wc-overlay-root .wc-count:hover { background: rgba(255, 255, 255, 0.14); }
 
+/* ---- agenda (all-fixtures list) ---- */
+#wc-overlay-root .wc-agenda { display: block; max-height: 320px; overflow-y: auto; }
+#wc-overlay-root .wc-agday {
+  display: block;
+  margin: 8px 0 3px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#wc-overlay-root .wc-agday:first-child { margin-top: 0; }
+#wc-overlay-root .wc-agrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 4px;
+  border-radius: 7px;
+  cursor: pointer;
+  color: #ffffff;
+  background: transparent;
+  text-align: left;
+}
+#wc-overlay-root .wc-agrow:hover { background: rgba(255, 255, 255, 0.12); }
+#wc-overlay-root .wc-agtime {
+  flex: 0 0 auto;
+  width: 38px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+#wc-overlay-root .wc-agrow.live .wc-agtime { color: #ff6b6b; }
+#wc-overlay-root .wc-agteams {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+}
+#wc-overlay-root .wc-agteams .wc-flag { font-size: 12px; vertical-align: -1px; }
+#wc-overlay-root .wc-agname { overflow: hidden; text-overflow: ellipsis; }
+#wc-overlay-root .wc-agscore {
+  color: #ffffff;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding: 0 2px;
+}
+
 /* ---- group standings table ---- */
 #wc-overlay-root .wc-table { display: block; }
 #wc-overlay-root .wc-trow {

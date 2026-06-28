@@ -26,6 +26,7 @@
   let tableGroup = "";
   let standings = null;
   let standingsSeq = 0;
+  let agendaMode = false;
 
   function viewDeck() {
     return favFilter ? deck.filter((m) => m.isFavorite) : deck;
@@ -54,7 +55,8 @@
     root.innerHTML = WC.render.card(
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health, favorites, favFilter, canFilter,
-        mode: tableMode ? "table" : "match", standings, canTable: tableMode || !!currentGroup(), icon: ICON,
+        mode: agendaMode ? "agenda" : tableMode ? "table" : "match",
+        standings, canTable: tableMode || !!currentGroup(), icon: ICON,
       },
       now
     );
@@ -76,6 +78,21 @@
     if (favBtn) favBtn.addEventListener("click", () => { favFilter = !favFilter; cursor = null; render(); });
     const tableBtn = root.querySelector(".wc-tabletoggle");
     if (tableBtn) tableBtn.addEventListener("click", () => toggleTable());
+    const agendaBtn = root.querySelector(".wc-agendatoggle");
+    if (agendaBtn) agendaBtn.addEventListener("click", () => {
+      agendaMode = !agendaMode;
+      if (agendaMode) { tableMode = false; standings = null; }
+      render();
+    });
+    root.querySelectorAll(".wc-agrow").forEach((b) =>
+      b.addEventListener("click", () => {
+        agendaMode = false;
+        const vd2 = viewDeck();
+        const i = vd2.findIndex((mm) => String(mm.id) === String(b.dataset.id));
+        if (i >= 0) cursor = i;
+        render();
+      })
+    );
   }
 
   function toggleTable() {
@@ -87,6 +104,7 @@
     }
     const group = currentGroup();
     if (!group) return;
+    agendaMode = false;
     tableMode = true;
     tableGroup = group;
     standings = { group, loading: true };
