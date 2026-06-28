@@ -19,6 +19,14 @@
     $("startMinimized").checked = s.startMinimized;
     $("refreshMins").value = String(s.refreshMins);
     $("refreshOut").textContent = refreshLabel(s.refreshMins);
+
+    $("notifyEnabled").checked = s.notify.enabled;
+    $("notifyFavoritesOnly").checked = s.notify.favoritesOnly;
+    $("notifyKickoff").checked = s.notify.kickoff;
+    $("notifyGoals").checked = s.notify.goals;
+    $("notifyFullTime").checked = s.notify.fullTime;
+    $("notifyLead").value = String(s.notify.leadMins);
+    $("notifyLeadOut").textContent = `${s.notify.leadMins} min`;
   }
 
   function collect() {
@@ -28,6 +36,15 @@
       corner,
       startMinimized: $("startMinimized").checked,
       refreshMins: Number($("refreshMins").value),
+      notify: {
+        ...current.notify,
+        enabled: $("notifyEnabled").checked,
+        favoritesOnly: $("notifyFavoritesOnly").checked,
+        kickoff: $("notifyKickoff").checked,
+        goals: $("notifyGoals").checked,
+        fullTime: $("notifyFullTime").checked,
+        leadMins: Number($("notifyLead").value),
+      },
     });
   }
 
@@ -78,8 +95,11 @@
     }
   }
 
+  const FIELDS =
+    'input[name="corner"], #startMinimized, #refreshMins, #notifyEnabled, #notifyFavoritesOnly, ' +
+    "#notifyKickoff, #notifyGoals, #notifyFullTime, #notifyLead";
   document.addEventListener("input", (e) => {
-    if (e.target.matches('input[name="corner"], #startMinimized, #refreshMins')) onChange();
+    if (e.target.matches(FIELDS)) onChange();
   });
   // visibilitychange→hidden is the reliable teardown signal for extension pages; pagehide covers close.
   document.addEventListener("visibilitychange", () => {

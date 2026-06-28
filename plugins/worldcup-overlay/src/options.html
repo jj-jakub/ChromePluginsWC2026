@@ -48,6 +48,52 @@
         </label>
       </section>
 
+      <section class="card">
+        <h2>Notifications</h2>
+        <p class="hint">Desktop alerts even when no tab is focused.</p>
+        <label class="row" for="notifyEnabled">
+          <span class="label"
+            ><strong>Enable notifications</strong
+            ><small>Kickoff reminders and score updates.</small></span
+          >
+          <input type="checkbox" id="notifyEnabled" />
+        </label>
+        <label class="row" for="notifyFavoritesOnly">
+          <span class="label"
+            ><strong>Only my favorites</strong
+            ><small>Alert only for nations you follow (★).</small></span
+          >
+          <input type="checkbox" id="notifyFavoritesOnly" />
+        </label>
+        <label class="row" for="notifyKickoff">
+          <span class="label"
+            ><strong>Kickoff reminders</strong><small>Shortly before a match starts.</small></span
+          >
+          <input type="checkbox" id="notifyKickoff" />
+        </label>
+        <label class="row" for="notifyGoals">
+          <span class="label"
+            ><strong>Goals &amp; live</strong
+            ><small>When a match goes live or the score changes.</small></span
+          >
+          <input type="checkbox" id="notifyGoals" />
+        </label>
+        <label class="row" for="notifyFullTime">
+          <span class="label"><strong>Full time</strong><small>Final results.</small></span>
+          <input type="checkbox" id="notifyFullTime" />
+        </label>
+        <label class="row" for="notifyLead">
+          <span class="label"
+            ><strong>Reminder lead time</strong
+            ><small>How early the kickoff reminder fires.</small></span
+          >
+          <span class="range">
+            <input type="range" id="notifyLead" min="1" max="120" step="1" />
+            <output id="notifyLeadOut" for="notifyLead"></output>
+          </span>
+        </label>
+      </section>
+
       <footer class="foot">
         <span id="status" class="status" role="status" aria-live="polite"></span>
         <span class="muted">Settings sync across your Chrome profiles.</span>

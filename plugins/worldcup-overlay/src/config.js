@@ -34,6 +34,12 @@ export const SEASON = {
   TTL_MS: 30 * 60 * 1000,
 };
 
+/** Already-fired notification tags (so each notification fires once). Bounded FIFO. */
+export const NOTIFIED = {
+  KEY: "wc_notified",
+  MAX: 200,
+};
+
 /** Background refresh alarm (chrome.alarms). PERIOD_MIN is the default when no user override. */
 export const ALARM = {
   NAME: "wc-refresh",

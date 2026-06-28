@@ -21,7 +21,7 @@
     "page": "src/options.html",
     "open_in_tab": true
   },
-  "permissions": ["storage", "alarms"],
+  "permissions": ["storage", "alarms", "notifications"],
   "host_permissions": ["https://www.thesportsdb.com/*"],
   "background": {
     "service_worker": "src/service-worker.js",

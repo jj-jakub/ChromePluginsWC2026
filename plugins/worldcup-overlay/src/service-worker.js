@@ -9,8 +9,9 @@ import { buildDeck, applyFavorites } from "./wc-state.js";
 import { tableFor } from "./standings.js";
 import { teamForm } from "./form.js";
 import { badgeFor } from "./badge.js";
+import { notificationsFor } from "./notify.js";
 import { nextDelay, classifyHealth } from "./backoff.js";
-import { ALARM, CACHE, SEASON, MSG, SETTINGS, HEALTH } from "./config.js";
+import { ALARM, CACHE, SEASON, MSG, SETTINGS, HEALTH, NOTIFIED } from "./config.js";
 
 /**
  * @typedef {Object} WcState   What the overlay renders.
@@ -115,6 +116,49 @@ async function refreshBadgeFromCache() {
   } catch (_) {}
 }
 
+// --- desktop notifications (opt-in; fires each tag once via a bounded fired-set) ---
+async function readNotifyPrefs() {
+  try {
+    const got = await chrome.storage.sync.get(SETTINGS.KEY);
+    const n = got[SETTINGS.KEY]?.notify;
+    if (n && typeof n === "object") return n;
+  } catch (_) {}
+  return { enabled: false };
+}
+
+async function fireNotifications(decorated) {
+  const prefs = await readNotifyPrefs();
+  if (!prefs.enabled) return;
+  const favorites = await readFavorites();
+  const candidates = notificationsFor(decorated.matches, Date.now(), favorites, prefs);
+  if (!candidates.length) return;
+
+  let firedArr = [];
+  try {
+    const got = await chrome.storage.local.get(NOTIFIED.KEY);
+    firedArr = (got[NOTIFIED.KEY] && got[NOTIFIED.KEY].tags) || [];
+  } catch (_) {}
+  const fired = new Set(firedArr);
+
+  const fresh = candidates.filter((c) => !fired.has(c.tag));
+  if (!fresh.length) return;
+
+  for (const c of fresh) {
+    try {
+      chrome.notifications.create(c.tag, {
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("icons/icon128.png"),
+        title: c.title,
+        message: c.message,
+      });
+    } catch (_) {}
+    fired.add(c.tag);
+  }
+  try {
+    await chrome.storage.local.set({ [NOTIFIED.KEY]: { tags: [...fired].slice(-NOTIFIED.MAX) } });
+  } catch (_) {}
+}
+
 // --- season events + group standings (lazy: only fetched when the user opens the table) ---
 async function readSeasonCache() {
   try {
@@ -208,7 +252,9 @@ async function refresh(force) {
       await writeCache(entry);
       await writeHealth({ failures: 0, lastSuccessMs: now, nextRetryAt: 0 });
       try {
-        await updateBadge(await decorate(entry.state, now));
+        const decorated = await decorate(entry.state, now);
+        await updateBadge(decorated);
+        await fireNotifications(decorated);
       } catch (_) {}
       return entry;
     } catch (err) {
@@ -320,6 +366,15 @@ chrome.storage.onChanged.addListener((changes, area) => {
     refreshBadgeFromCache();
   }
 });
+
+// Dismiss a notification when the user clicks it (we can't programmatically open the popup).
+try {
+  chrome.notifications.onClicked.addListener((id) => {
+    try {
+      chrome.notifications.clear(id);
+    } catch (_) {}
+  });
+} catch (_) {}
 
 chrome.runtime.onInstalled.addListener(warmUp);
 chrome.runtime.onStartup.addListener(warmUp);
