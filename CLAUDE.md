@@ -12,7 +12,9 @@ GitHub: `git@github.com:jj-jakub/ChromePluginsWC2026.git` (origin uses **SSH** �
 creds on this machine, so push over SSH).
 
 ## Plugins
-- **worldcup-overlay** — a floating widget pinned to a **configurable corner of every page**
+- **worldcup-overlay** — feature-rich (favorites, group table, form, agenda, live-minute, calendar
+  export, score-pulse, opt-in notifications, toolbar badge). A floating widget pinned to a
+  **configurable corner of every page**
   showing FIFA World Cup 2026: the live match, else next fixture, else last result. Country flags,
   ‹ › arrows to rotate the whole match deck, a counter that jumps back to "current", a manual
   ↻ refresh, and minimize-to-ball. **Follow nations with the ★** — a favorite's match becomes the
@@ -35,18 +37,22 @@ src/
   backoff.js         PURE: nextDelay (capped exponential) + classifyHealth (ok|degraded|down)
   standings.js       PURE: computeStandings / tableFor — group tables from finished results (FIFA tiebreakers, top-2 qualify)
   form.js            PURE: teamForm — a nation's recent W/D/L + GF/GA from finished season events
+  badge.js           PURE: badgeFor — toolbar badge text/color/title (live score / countdown)
+  notify.js          PURE: notificationsFor — which desktop notifications should exist now (stable tags)
   ── content scripts (classic; share one self.WC namespace, loaded in this order before content.js) ──
   format.js          self.WC.fmt — esc / clock / dayLabel / until / ago / roundLabel / liveMinute
   flags.js           self.WC.flag — country → emoji flag
   settings.js        self.WC.settings — PURE DEFAULTS + normalize() gatekeeper for chrome.storage.sync
   agenda.js          self.WC.agenda — PURE groupByDay (all-fixtures list grouped by day)
+  ics.js             self.WC.ics — PURE toICS (RFC5545 .ics for "add to calendar")
+  score-diff.js      self.WC.scoreDiff — PURE diff / announceFor (goal pulse + aria-live announcer)
   render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda); reused by the popup
   content.js         inject isolated widget, read settings, render the deck, rotate / refresh / minimize
   content.css        scoped styles (+ .wc-pos-* corner classes)
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
-test/                node --test (96 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form, agenda
+test/                node --test (115 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form, agenda, ics, badge, notify, score-diff
 ```
 
 ## Key decisions (this is why things are the way they are)
@@ -65,6 +71,9 @@ test/                node --test (96 cases) over wc-state, api, flags, format, s
 - **Flags are emoji, not images** — deliberate: no `<img>` means nothing breaks under strict
   page CSP, zero network. Renders natively on macOS. (Windows shows 2-letter codes — OS limit.)
 - **Network only in the service worker** — `host_permissions` bypass CORS there, not in pages.
+- **Permissions: `storage`, `alarms`, `notifications`** (notifications opt-in, default off) + host
+  `thesportsdb.com` + `<all_urls>` content script. The worker also sets the toolbar badge and (when
+  enabled) fires `chrome.notifications` after each refresh.
 - The pure logic (`wc-state.js`) and content helpers (`format.js`/`flags.js`) are deliberately
   `chrome`/network-free so they stay unit-testable.
 

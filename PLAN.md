@@ -40,10 +40,10 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 - [x] **Estimated live minute** — pure `liveMinute(kickoffMs, now)` in `format.js` (HT gap, cap 90+, `~` prefix, yields to provider progress).
 
 ## Commit 5 — Glanceable & actionable
-- [ ] **Score-change feedback** — pure `score-diff.js` (`diff`/`announceFor`); GOAL pulse + visually-hidden `aria-live` region (reduced-motion-safe).
-- [ ] **Add-to-calendar (.ics)** — pure `ics.js` (RFC5545 CRLF/escaping, VEVENT + VALARM, stable UID); `data:` anchor download.
-- [ ] **Desktop notifications** — pure `notify.js` `diffForNotifications`; worker fires `chrome.notifications` (favorites-only default). **+`notifications` permission.**
-- [ ] **Toolbar badge** — pure `badge.js` `badgeFor` (live score red / countdown / idle, ~4-char clamp, favorite-aware).
+- [x] **Toolbar badge** — pure `badge.js` `badgeFor` (live score red / countdown / idle, ~4-char clamp, favorite-aware); SW sets it after each refresh + on favorites change.
+- [x] **Desktop notifications** — pure `notify.js` `notificationsFor` (stable tags, favorites-only option); SW fires `chrome.notifications` de-duped via a bounded fired-set; options Notifications section. **+`notifications` permission.**
+- [x] **Add-to-calendar (.ics)** — pure `ics.js` (RFC5545 CRLF/escaping, VEVENT + VALARM, stable UID); `＋ Calendar` button downloads via a `data:` anchor (overlay + popup).
+- [x] **Score-change feedback** — pure `score-diff.js` (`diff`/`announceFor`); ⚽ GOAL pulse + visually-hidden `aria-live` announcer (reduced-motion-safe).
 
 ## Commit 6 — Accessibility, i18n & placement
 - [ ] **Accessibility & keyboard** — real `<button>`s; pure `keymap.js` `keyToAction` (←/→/Esc/R/Enter/Space); `:focus-visible`, `prefers-reduced-motion`, `forced-colors`.
