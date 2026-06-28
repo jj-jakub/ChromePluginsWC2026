@@ -1,5 +1,7 @@
 # ChromePluginsWC2026
 
+[![CI](https://github.com/jj-jakub/ChromePluginsWC2026/actions/workflows/ci.yml/badge.svg)](https://github.com/jj-jakub/ChromePluginsWC2026/actions/workflows/ci.yml)
+
 A small monorepo of focused **Chrome extensions (Manifest V3)**. Each plugin lives in its own
 folder under [`plugins/`](plugins/) and loads independently — no build step, no dependencies.
 
@@ -11,7 +13,7 @@ folder under [`plugins/`](plugins/) and loads independently — no build step, n
 
 | Plugin | What it does |
 | ------ | ------------ |
-| **[World Cup Overlay](plugins/worldcup-overlay/)** | A live FIFA World Cup 2026 widget pinned to the **top-right of every page** — the in-progress match, or the next fixture / last result when nothing is live. Country flags, ‹ › to rotate through all matches, manual refresh, and a minimize-to-ball toggle. Data from [TheSportsDB](https://www.thesportsdb.com/) (free, no signup). |
+| **[World Cup Overlay](plugins/worldcup-overlay/)** | A live FIFA World Cup 2026 widget in a **configurable corner of every page** — the in-progress match, or the next fixture / last result. Country flags, ‹ › to rotate the deck, **★ follow nations**, a **group table** and **recent form**, a **today's-fixtures** list, **add-to-calendar**, **drag-to-reposition**, **light/dark theme**, a **toolbar badge + popup**, opt-in **desktop notifications**, **keyboard control**, **5-language** UI, and a **per-site allow/deny** list. Data from [TheSportsDB](https://www.thesportsdb.com/) (free, no signup). [Privacy](plugins/worldcup-overlay/PRIVACY.md). |
 
 ## Quick start (just use it)
 
@@ -47,9 +49,11 @@ No toolchain to install — these are plain HTML/CSS/JS extensions. The workflow
    # run the unit tests for the pure logic (zero dependencies)
    cd plugins/worldcup-overlay && node --test
 
-   # validate the manifest is well-formed JSON
-   python3 -c "import json; json.load(open('plugins/worldcup-overlay/manifest.json'))"
+   # validate the manifest (mv3, semver, referenced files exist, WAR well-formed)
+   node scripts/validate-manifest.mjs plugins/worldcup-overlay
    ```
+
+   Both run automatically on every push/PR via [GitHub Actions](.github/workflows/ci.yml).
 
 ### Repository layout
 
