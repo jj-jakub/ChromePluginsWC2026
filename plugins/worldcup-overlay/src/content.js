@@ -36,6 +36,8 @@
   let refreshing = false;
   let health = null;
   let settings = settingsApi.DEFAULTS;
+  let pollId = null; // setInterval ids, so we can stop polling a dead context
+  let tickId = null;
 
   const root = document.createElement("div");
   root.id = ROOT_ID;
@@ -87,8 +89,10 @@
 
   function setMinimized(v) {
     minimized = v;
+    // Per-session (chrome.storage.session, cleared on browser restart) so settings.startMinimized
+    // governs each fresh start instead of being permanently shadowed by a persisted choice.
     try {
-      chrome.storage.local.set({ [UI_KEY]: { minimized: v } });
+      chrome.storage.session.set({ [UI_KEY]: { minimized: v } });
     } catch (_) {}
     render();
   }
@@ -106,7 +110,27 @@
     }
   }
 
+  // After an extension update/reload, an orphaned content script keeps running but chrome.runtime
+  // is invalidated. Detect that and stop the loops so we don't poll a dead context forever.
+  function contextAlive() {
+    try {
+      return !!(chrome.runtime && chrome.runtime.id);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function stopLoops() {
+    if (pollId) clearInterval(pollId);
+    if (tickId) clearInterval(tickId);
+    pollId = tickId = null;
+  }
+
   function requestState(force) {
+    if (!contextAlive()) {
+      stopLoops();
+      return;
+    }
     if (force) {
       refreshing = true;
       render(); // show the spinner immediately
@@ -138,8 +162,8 @@
     applyChrome();
     render();
     requestState();
-    setInterval(requestState, POLL_MS);
-    setInterval(render, TICK_MS);
+    pollId = setInterval(requestState, POLL_MS);
+    tickId = setInterval(render, TICK_MS);
   }
 
   // React to settings edited in the options page (or the overlay's own controls) while a tab is open.
@@ -155,12 +179,14 @@
     } catch (_) {}
   }
 
-  // Bootstrap: load settings (sync) first, then the per-session UI state (local), then start.
+  // Bootstrap: load settings (sync) first, then the per-session minimized state
+  // (chrome.storage.session — cleared on browser restart), then start. If session has no stored
+  // value (fresh browser start, or access not yet granted), settings.startMinimized governs.
   function boot() {
     const afterSettings = () => {
       try {
-        chrome.storage.local.get(UI_KEY, (got) => {
-          const ui = got && got[UI_KEY];
+        chrome.storage.session.get(UI_KEY, (got) => {
+          const ui = !chrome.runtime.lastError && got && got[UI_KEY];
           minimized =
             ui && typeof ui.minimized === "boolean" ? ui.minimized : settings.startMinimized;
           start();

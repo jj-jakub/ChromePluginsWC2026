@@ -29,9 +29,8 @@ export function classifyHealth(s, opts) {
   const { DOWN_FAILURES, DOWN_AGE_MS } = opts;
   const staleAge =
     s.lastSuccessMs != null && Number.isFinite(s.now) && s.now - s.lastSuccessMs > DOWN_AGE_MS;
-  // Never had a success, or many in a row, or no fresh data for too long => down.
-  if (failures >= DOWN_FAILURES || staleAge || s.lastSuccessMs == null) {
-    return failures >= DOWN_FAILURES || staleAge ? "down" : "degraded";
-  }
+  // Many consecutive failures, or no fresh data for too long => down. A handful of recent failures
+  // (including a never-succeeded fresh install) reads as a transient blip => degraded.
+  if (failures >= DOWN_FAILURES || staleAge) return "down";
   return "degraded";
 }

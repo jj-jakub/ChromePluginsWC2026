@@ -41,8 +41,10 @@ export function cleanRecord(raw) {
   return {
     ...raw,
     idEvent: id,
-    strHomeTeam: home || raw.strHomeTeam, // keep undefined-ish through to normalizeEvent's default
-    strAwayTeam: away || raw.strAwayTeam,
+    // Fall back to undefined (not the untrimmed original) so a whitespace-only name lets
+    // normalizeEvent apply its "Home"/"Away" default instead of rendering a blank label.
+    strHomeTeam: home || undefined,
+    strAwayTeam: away || undefined,
     strVenue: trimOrEmpty(raw.strVenue),
     strStatus: trimOrEmpty(raw.strStatus),
     strProgress: trimOrEmpty(raw.strProgress),

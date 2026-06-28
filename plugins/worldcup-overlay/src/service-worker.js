@@ -19,15 +19,22 @@ import { ALARM, CACHE, MSG, SETTINGS, HEALTH } from "./config.js";
 const TAG = "[worldcup-overlay]";
 
 let inFlight = null; // de-dupes concurrent refreshes
+let inFlightForce = false; // whether the in-flight refresh is a force (bypasses backoff)
 
 const hasLive = (state) =>
   !!state?.matches?.some((m) => m.matchMode === "live");
 
 const ttlFor = (state) => (hasLive(state) ? CACHE.TTL_LIVE_MS : CACHE.TTL_IDLE_MS);
 
+// Storage reads must never reject — a transient hiccup should degrade to a default, not drop the
+// whole getState response (the message channel is held open with `return true`).
 async function readCache() {
-  const got = await chrome.storage.local.get(CACHE.KEY);
-  return got[CACHE.KEY] || null;
+  try {
+    const got = await chrome.storage.local.get(CACHE.KEY);
+    return got[CACHE.KEY] || null;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function writeCache(entry) {
@@ -38,8 +45,12 @@ async function writeCache(entry) {
 const DEFAULT_HEALTH = { failures: 0, lastSuccessMs: null, nextRetryAt: 0 };
 
 async function readHealth() {
-  const got = await chrome.storage.local.get(HEALTH.STATE_KEY);
-  return got[HEALTH.STATE_KEY] || { ...DEFAULT_HEALTH };
+  try {
+    const got = await chrome.storage.local.get(HEALTH.STATE_KEY);
+    return got[HEALTH.STATE_KEY] || { ...DEFAULT_HEALTH };
+  } catch (_) {
+    return { ...DEFAULT_HEALTH };
+  }
 }
 
 async function writeHealth(h) {
@@ -57,13 +68,16 @@ function healthInfo(h, now) {
 }
 
 /**
- * Fetch + classify into a fresh state, persisting it. De-duped across concurrent callers.
- * Honors the backoff window (skips the network while `now < nextRetryAt`) unless `force`d.
- * Updates the persisted health counter on success/failure.
+ * Fetch + classify into a fresh state, persisting it. De-duped across concurrent callers — but the
+ * de-dup is force-aware: a force refresh (manual ↻) is never satisfied by a backing-off non-force
+ * call, so it always exercises the backoff bypass. Honors the backoff window (skips the network
+ * while `now < nextRetryAt`) unless `force`d. Updates the persisted health counter on success/failure.
  */
 async function refresh(force) {
-  if (inFlight) return inFlight;
-  inFlight = (async () => {
+  // Reuse the in-flight refresh only when it's itself a force, or when this caller isn't forcing.
+  if (inFlight && (inFlightForce || !force)) return inFlight;
+
+  const run = (async () => {
     const now = Date.now();
     const health = await readHealth();
     if (!force && health.nextRetryAt && now < health.nextRetryAt) {
@@ -86,10 +100,16 @@ async function refresh(force) {
       throw err;
     }
   })();
+
+  inFlight = run;
+  inFlightForce = !!force;
   try {
-    return await inFlight;
+    return await run;
   } finally {
-    inFlight = null;
+    if (inFlight === run) {
+      inFlight = null;
+      inFlightForce = false;
+    }
   }
 }
 
@@ -117,7 +137,11 @@ async function getState(force) {
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === MSG.GET_STATE) {
-    getState(msg.force).then(sendResponse);
+    // Always answer (the channel is held open below), even if something unexpected rejects —
+    // otherwise the content/popup callback hangs and only sees a generic lastError.
+    getState(msg.force)
+      .then(sendResponse)
+      .catch((e) => sendResponse({ ok: false, error: String(e?.message || e), health: null }));
     return true; // keep the channel open for the async response
   }
   return false;
@@ -139,7 +163,16 @@ async function ensureAlarm() {
   chrome.alarms.create(ALARM.NAME, { periodInMinutes: await refreshMinutes() });
 }
 
+// Let content scripts read/write chrome.storage.session (default is trusted-contexts only). Used
+// for the per-session minimized state so settings.startMinimized governs each fresh browser start.
+function allowSessionFromContent() {
+  try {
+    chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" });
+  } catch (_) {}
+}
+
 function warmUp() {
+  allowSessionFromContent();
   ensureAlarm();
   refresh().catch((e) => console.warn(TAG, "refresh failed", e));
 }

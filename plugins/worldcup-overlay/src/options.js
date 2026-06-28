@@ -57,6 +57,16 @@
     writeTimer = setTimeout(persist, 400);
   }
 
+  // Commit any pending debounced write before the page goes away, so a quick edit-then-close
+  // isn't silently dropped.
+  function flushPending() {
+    if (writeTimer) {
+      clearTimeout(writeTimer);
+      writeTimer = null;
+      persist();
+    }
+  }
+
   function load() {
     try {
       chrome.storage.sync.get(KEY, (got) => {
@@ -71,6 +81,11 @@
   document.addEventListener("input", (e) => {
     if (e.target.matches('input[name="corner"], #startMinimized, #refreshMins')) onChange();
   });
+  // visibilitychange→hidden is the reliable teardown signal for extension pages; pagehide covers close.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushPending();
+  });
+  window.addEventListener("pagehide", flushPending);
   // Adopt changes made elsewhere (e.g. the overlay's own controls) while this tab is open.
   try {
     chrome.storage.onChanged.addListener((changes, area) => {

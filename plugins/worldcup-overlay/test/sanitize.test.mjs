@@ -56,6 +56,12 @@ test("cleanRecord trims, cleans scores, and preserves unknown fields", () => {
   assert.equal(c.extraProviderField, "keep me");
 });
 
+test("cleanRecord drops a whitespace-only team name to undefined (lets normalizeEvent default fire)", () => {
+  const c = cleanRecord({ idEvent: "1", strHomeTeam: "  ", strAwayTeam: "Norway" });
+  assert.equal(c.strHomeTeam, undefined); // not the untrimmed "  "
+  assert.equal(c.strAwayTeam, "Norway");
+});
+
 test("sanitizeEvents never throws on garbage and drops the rejects", () => {
   assert.doesNotThrow(() => sanitizeEvents("totally not an array"));
   assert.doesNotThrow(() => sanitizeEvents(null));
