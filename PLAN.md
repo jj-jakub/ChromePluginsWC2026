@@ -53,8 +53,14 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 - [ ] **Theme: auto / light / dark** — pure `resolveTheme(pref, systemDark)`; `.wc-theme-*` CSS variants.
 
 ## Commit 7 — Distribution / store gate
-- [ ] **CI + manifest validator** — `.github/workflows/ci.yml` (node --test + validate + package artifact); pure `scripts/validate-manifest.mjs`; README badge; guarded footer version stamp.
-- [ ] **Privacy & permission docs** — `docs/privacy-policy.md`, `docs/store-listing.md` (per-permission justification), `PRIVACY.md`; written LAST so the permission table is final.
+- [x] **CI + manifest validator** — `.github/workflows/ci.yml` (node --test + validate + package artifact); pure `scripts/validate-manifest.mjs`; README CI badge; guarded footer version stamp.
+- [x] **Privacy & permission docs** — `docs/privacy-policy.md`, `docs/store-listing.md` (per-permission justification), `PRIVACY.md`; permission table reflects the final manifest (incl. notifications).
+
+---
+
+**The 1.0 roadmap above is complete** — all 21 features shipped across 7 batches, each with pure
+unit-tested logic and an adversarial multi-agent review (findings verified + fixed). 137 tests pass.
+Next work is the deferred / fast-follow list below.
 
 ## Deferred (post-1.0)
 - Knockout bracket view (empty until group stage ends; season fetch lands it cheaply later).

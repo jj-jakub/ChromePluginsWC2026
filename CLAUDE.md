@@ -40,19 +40,26 @@ src/
   badge.js           PURE: badgeFor — toolbar badge text/color/title (live score / countdown)
   notify.js          PURE: notificationsFor — which desktop notifications should exist now (stable tags)
   ── content scripts (classic; share one self.WC namespace, loaded in this order before content.js) ──
+  i18n.js            self.WC.t/dir — chrome.i18n wrapper (English fallback) + RTL direction
   format.js          self.WC.fmt — esc / clock / dayLabel / until / ago / roundLabel / liveMinute
   flags.js           self.WC.flag — country → emoji flag
   settings.js        self.WC.settings — PURE DEFAULTS + normalize() gatekeeper for chrome.storage.sync
   agenda.js          self.WC.agenda — PURE groupByDay (all-fixtures list grouped by day)
   ics.js             self.WC.ics — PURE toICS (RFC5545 .ics for "add to calendar")
   score-diff.js      self.WC.scoreDiff — PURE diff / announceFor (goal pulse + aria-live announcer)
+  site-match.js      self.WC.site — PURE siteAllowed / ruleMatches (per-site allow/deny)
+  ui-logic.js        self.WC.ui — PURE resolveTheme (auto/light/dark)
+  keymap.js          self.WC.keymap — PURE keyToAction (←/→/Esc/R/Enter, RTL-aware)
+  position.js        self.WC.position — PURE nearestCorner / clampToViewport (drag snap)
   render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda); reused by the popup
-  content.js         inject isolated widget, read settings, render the deck, rotate / refresh / minimize
-  content.css        scoped styles (+ .wc-pos-* corner classes)
+  content.js         inject isolated widget; settings/theme/dir/site-rules; render the deck; rotate / refresh / minimize / drag / keyboard
+  content.css        scoped styles (+ .wc-pos-* corners, .wc-theme-light, focus/reduced-motion/forced-colors, [dir=rtl])
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
-test/                node --test (115 cases) over wc-state, api, flags, format, settings, render, sanitize, reconcile, backoff, standings, form, agenda, ics, badge, notify, score-diff
+_locales/{en,es,fr,de,pt}/messages.json   i18n catalogs (en complete; others fall back to en)
+test/                node --test (137 cases) — every PURE module; run `cd plugins/worldcup-overlay && node --test`
+scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/workflows/ci.yml runs tests+validate+package
 ```
 
 ## Key decisions (this is why things are the way they are)
