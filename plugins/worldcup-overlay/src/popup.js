@@ -27,6 +27,9 @@
   let standings = null;
   let standingsSeq = 0;
   let agendaMode = false;
+  let pitchMode = false;
+  let pitchStartMs = null;
+  let pitchCancel = null;
 
   function viewDeck() {
     return favFilter ? deck.filter((m) => m.isFavorite) : deck;
@@ -46,16 +49,22 @@
   }
 
   function render() {
+    // Stop a running pitch loop before root.innerHTML is replaced; restarted below if still active.
+    if (pitchCancel) {
+      pitchCancel();
+      pitchCancel = null;
+    }
     const now = Date.now();
     const canFilter = deck.some((m) => m.isFavorite);
     if (!canFilter && favFilter) { favFilter = false; cursor = null; } // re-anchor to primary
     const vd = viewDeck();
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
+    if (pitchMode && (loadError || !vd.length)) pitchMode = false; // never strand the user in the pitch
 
     root.innerHTML = WC.render.card(
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health, favorites, favFilter, canFilter,
-        mode: agendaMode ? "agenda" : tableMode ? "table" : "match",
+        mode: pitchMode ? "pitch" : agendaMode ? "agenda" : tableMode ? "table" : "match",
         standings, canTable: tableMode || !!currentGroup(), icon: ICON,
       },
       now
@@ -81,9 +90,11 @@
     const agendaBtn = root.querySelector(".wc-agendatoggle");
     if (agendaBtn) agendaBtn.addEventListener("click", () => {
       agendaMode = !agendaMode;
-      if (agendaMode) { tableMode = false; standings = null; }
+      if (agendaMode) { tableMode = false; pitchMode = false; standings = null; }
       render();
     });
+    const pitchBtn = root.querySelector(".wc-pitchtoggle");
+    if (pitchBtn) pitchBtn.addEventListener("click", () => togglePitch());
     root.querySelectorAll(".wc-agrow").forEach((b) =>
       b.addEventListener("click", () => {
         agendaMode = false;
@@ -95,6 +106,29 @@
     );
     const cal = root.querySelector(".wc-cal");
     if (cal) cal.addEventListener("click", () => downloadIcs(cal.dataset.id));
+
+    if (pitchMode && WC.pitchAnim) {
+      const vd3 = viewDeck();
+      const m = vd3[cursor != null && cursor < vd3.length ? cursor : clampPrimaryToView(vd3)] || null;
+      pitchCancel = WC.pitchAnim.run(root, m, pitchStartMs);
+    }
+  }
+
+  // Flip to / from the schematic pitch for the currently-featured match.
+  function togglePitch() {
+    if (pitchMode) {
+      pitchMode = false;
+      render();
+      return;
+    }
+    const vd = viewDeck();
+    if (!vd.length) return;
+    tableMode = false;
+    standings = null;
+    agendaMode = false;
+    pitchMode = true;
+    pitchStartMs = Date.now();
+    render();
   }
 
   function downloadIcs(id) {
@@ -121,6 +155,7 @@
     const group = currentGroup();
     if (!group) return;
     agendaMode = false;
+    pitchMode = false;
     tableMode = true;
     tableGroup = group;
     standings = { group, loading: true };

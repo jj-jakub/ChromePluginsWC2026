@@ -206,6 +206,73 @@
     return `<div class="wc-health wc-health-${status}">${lead} ${retry}${last}</div>`;
   }
 
+  // ---- schematic pitch view (illustrative top-down play area) ----
+
+  // A compact scoreline above the pitch so the diagram view still carries score/status.
+  function pitchScoreline(m, now) {
+    const live = m.matchMode === "live";
+    const result = m.matchMode === "result";
+    let pill;
+    if (live) pill = `<span class="wc-status live"><span class="wc-live-dot"></span>${t("statusLive", "Live")}</span>`;
+    else if (result) pill = `<span class="wc-status result">${t("statusFullTime", "Full time")}</span>`;
+    else pill = `<span class="wc-status upcoming">${t("statusUpNext", "Up next")}</span>`;
+    const showScore = (live || result) && m.homeScore != null && m.awayScore != null;
+    const sc = showScore ? `${esc(m.homeScore)}–${esc(m.awayScore)}` : "v";
+    const hf = flagOf(m.home);
+    const af = flagOf(m.away);
+    return `<div class="wc-pitch-score">
+        ${pill}
+        <span class="wc-pitch-teams">
+          <span class="wc-pitch-tm">${hf ? `<span class="wc-flag">${hf}</span>` : ""}${esc(m.home)}</span>
+          <span class="wc-pitch-sc">${sc}</span>
+          <span class="wc-pitch-tm">${esc(m.away)}${af ? `<span class="wc-flag">${af}</span>` : ""}</span>
+        </span>
+      </div>`;
+  }
+
+  // One player token: a translated <g> carrying its base coords so pitch-anim.js can bob it.
+  function pitchToken(p, side) {
+    return `<g class="wc-pl wc-pl-${side}" data-x="${p.x}" data-y="${p.y}" transform="translate(${p.x} ${p.y})"><circle class="wc-pl-dot" r="2.6"></circle><text class="wc-pl-num" x="0" y="0">${esc(p.n)}</text></g>`;
+  }
+
+  /** Top-down schematic pitch for one match. Positions come from WC.pitch (formation-derived). */
+  function pitchBody(m, now) {
+    if (!m || !WC.pitch) return `<div class="wc-empty">${esc(t("emptyNoMatches", "No World Cup matches found right now."))}</div>`;
+    const hForm = m.homeFormation || WC.pitch.formationFor(m.home);
+    const aForm = m.awayFormation || WC.pitch.formationFor(m.away);
+    const lay = WC.pitch.layout(hForm, aForm);
+    const path = WC.pitch.passPath(lay);
+    const b0 = WC.pitch.ballAt(path, 0);
+
+    let stripes = "";
+    for (let i = 0; i < 10; i++) stripes += `<rect class="wc-stripe wc-stripe-${i % 2}" x="${i * 10}" y="0" width="10" height="64"></rect>`;
+    const lines = `<g class="wc-pitch-lines">
+        <rect x="1" y="1" width="98" height="62" rx="1"></rect>
+        <line x1="50" y1="1" x2="50" y2="63"></line>
+        <circle cx="50" cy="32" r="9"></circle>
+        <circle class="wc-pitch-spot" cx="50" cy="32" r="0.7"></circle>
+        <rect x="1" y="16" width="15" height="32"></rect>
+        <rect x="1" y="24" width="6" height="16"></rect>
+        <circle class="wc-pitch-spot" cx="11" cy="32" r="0.6"></circle>
+        <rect x="83" y="16" width="15" height="32"></rect>
+        <rect x="92" y="24" width="6" height="16"></rect>
+        <circle class="wc-pitch-spot" cx="89" cy="32" r="0.6"></circle>
+      </g>`;
+    const players = lay.home.map((p) => pitchToken(p, "h")).join("") + lay.away.map((p) => pitchToken(p, "a")).join("");
+    const ball = `<g class="wc-pitch-ball" transform="translate(${b0.x} ${b0.y})"><circle r="1.7"></circle></g>`;
+    const label = esc(t("titlePitchView", "Pitch view"));
+    return `${pitchScoreline(m, now)}
+      <div class="wc-pitch-wrap">
+        <svg class="wc-pitch" viewBox="0 0 100 64" role="img" aria-label="${label}" preserveAspectRatio="xMidYMid meet">
+          <g class="wc-pitch-grass">${stripes}</g>
+          ${lines}
+          <g class="wc-pitch-players">${players}</g>
+          ${ball}
+        </svg>
+        <div class="wc-pitch-note">${esc(t("pitchSchematic", "Schematic — illustrative positions, not live tracking."))}</div>
+      </div>`;
+  }
+
   /**
    * Full card markup.
    * @param {Object} model
@@ -232,9 +299,10 @@
 
     const tableMode = mode === "table";
     const agendaMode = mode === "agenda";
+    const pitchMode = mode === "pitch";
     const shownId = deck[cursor] && deck[cursor].id;
     const pulsing =
-      !tableMode && !agendaMode && flash && flash.ids && shownId != null && flash.ids.indexOf(shownId) >= 0;
+      !tableMode && !agendaMode && !pitchMode && flash && flash.ids && shownId != null && flash.ids.indexOf(shownId) >= 0;
     const banner = healthBanner(health, now);
     let body;
     let nav = "";
@@ -242,6 +310,8 @@
       body = standingsBody(standings);
     } else if (agendaMode) {
       body = agendaBody(deck, now);
+    } else if (pitchMode) {
+      body = pitchBody(deck[cursor], now);
     } else if (loadError) {
       body = `<div class="wc-empty">${esc(t("emptyError", "Couldn't load World Cup data."))}</div>`;
     } else if (!deck.length) {
@@ -269,11 +339,14 @@
     const tableBtn = canTable
       ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? showMatchT : esc(t("titleGroupTable", "Group table"))}" aria-label="${esc(t("ariaToggleTable", "Toggle group table"))}" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
       : "";
-    const favBtn = canFilter && !tableMode && !agendaMode
+    const pitchBtn = !loadError && deck.length
+      ? `<button type="button" class="wc-icon wc-pitchtoggle${pitchMode ? " on" : ""}" title="${pitchMode ? showMatchT : esc(t("titlePitchView", "Pitch view"))}" aria-label="${esc(t("ariaTogglePitch", "Toggle pitch view"))}" aria-pressed="${pitchMode ? "true" : "false"}">⛶</button>`
+      : "";
+    const favBtn = canFilter && !tableMode && !agendaMode && !pitchMode
       ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? esc(t("titleShowAll", "Show all matches")) : esc(t("titleFavoritesOnly", "Show favorites only"))}" aria-label="${esc(t("ariaToggleFavorites", "Toggle favorites only"))}" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
       : "";
 
-    const yourNext = !tableMode && !agendaMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
+    const yourNext = !tableMode && !agendaMode && !pitchMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
 
     const ver =
       typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest
@@ -292,6 +365,7 @@
           <span class="wc-title">FIFA World Cup</span>
           ${agendaBtn}
           ${tableBtn}
+          ${pitchBtn}
           ${favBtn}
           <button type="button" class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="${esc(t("titleRefresh", "Refresh now"))}" aria-label="${esc(t("titleRefresh", "Refresh now"))}">↻</button>
           <button type="button" class="wc-icon wc-min" title="${esc(t("titleMinimize", "Minimize"))}" aria-label="${esc(t("titleMinimize", "Minimize"))}">–</button>
@@ -313,5 +387,5 @@
       </button>`;
   }
 
-  WC.render = { teamRow, matchBody, card, mini };
+  WC.render = { teamRow, matchBody, card, mini, pitchBody };
 })();

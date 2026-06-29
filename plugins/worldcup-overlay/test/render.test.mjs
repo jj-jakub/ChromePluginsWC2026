@@ -7,8 +7,9 @@ await import(new URL("../src/format.js", import.meta.url));
 await import(new URL("../src/flags.js", import.meta.url));
 await import(new URL("../src/agenda.js", import.meta.url));
 await import(new URL("../src/ics.js", import.meta.url));
+await import(new URL("../src/pitch.js", import.meta.url));
 await import(new URL("../src/render.js", import.meta.url));
-const { card, mini, matchBody, teamRow } = globalThis.WC.render;
+const { card, mini, matchBody, teamRow, pitchBody } = globalThis.WC.render;
 
 const NOW = Date.UTC(2026, 5, 27, 12, 0, 0);
 const H = 3600000;
@@ -262,6 +263,58 @@ test("card has no goal pulse when the flashed id isn't the shown match", () => {
   const html = card({ deck, cursor: 0, flash: { ids: ["other"], announce: "" }, icon: "i" }, NOW);
   assert.doesNotMatch(html, /wc-card wc-goal/);
   assert.doesNotMatch(html, /GOAL!/);
+});
+
+test("card in pitch mode draws the schematic svg and hides the match nav", () => {
+  const deck = [
+    m({ id: "a", matchMode: "live", hs: 1, as: 0 }),
+    m({ id: "b", matchMode: "upcoming", ko: NOW + H }),
+  ];
+  const html = card({ deck, cursor: 0, mode: "pitch", icon: "i.png" }, NOW);
+  assert.match(html, /wc-pitch/); // svg present
+  assert.match(html, /wc-pitchtoggle on/); // toggle reflects active state
+  assert.match(html, /Schematic/); // honest "not live tracking" caption
+  assert.doesNotMatch(html, /wc-nav/); // no single-match rotation nav in pitch mode
+});
+
+test("card shows the pitch toggle whenever there's a non-empty deck, and not when empty", () => {
+  assert.match(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-pitchtoggle/);
+  assert.doesNotMatch(card({ deck: [], icon: "i" }, NOW), /wc-pitchtoggle/);
+});
+
+test("pitchBody renders 22 player tokens, a ball, and the score/status line", () => {
+  const html = pitchBody(m({ matchMode: "live", hs: 2, as: 1 }), NOW);
+  const tokens = html.match(/class="wc-pl /g) || [];
+  assert.equal(tokens.length, 22); // 11 per side
+  assert.match(html, /wc-pitch-ball/);
+  assert.match(html, /wc-status live/);
+  assert.match(html, /2–1/); // score shown in the pitch header
+  // every player token carries the base coords the animator reads back
+  assert.match(html, /data-x="[\d.]+" data-y="[\d.]+"/);
+});
+
+test("pitchBody escapes hostile team names in the scoreline", () => {
+  const html = pitchBody(m({ matchMode: "upcoming", ko: NOW + H, home: "<b>x</b>" }), NOW);
+  assert.doesNotMatch(html, /<b>x<\/b>/);
+  assert.match(html, /&lt;b&gt;x/);
+});
+
+test("pitchBody shows 'v' (not a score) for an upcoming match", () => {
+  const html = pitchBody(m({ matchMode: "upcoming", ko: NOW + H }), NOW);
+  assert.match(html, /wc-pitch-sc">v</);
+  assert.doesNotMatch(html, /–\d/); // no scoreline before kickoff
+});
+
+test("loadError hides the pitch toggle (no way to enter a view with no match body)", () => {
+  const html = card({ deck: [m({ matchMode: "live" })], cursor: 0, loadError: true, icon: "i" }, NOW);
+  assert.doesNotMatch(html, /wc-pitchtoggle/);
+});
+
+test("pitch mode suppresses the favorites filter and the 'Your next' line", () => {
+  const deck = [{ id: "a", home: "Brazil", away: "Norway", matchMode: "live", kickoffMs: NOW, isFavorite: true }];
+  const html = card({ deck, cursor: 0, mode: "pitch", favorites: ["Brazil"], canFilter: true, icon: "i" }, NOW);
+  assert.doesNotMatch(html, /wc-favfilter/);
+  assert.doesNotMatch(html, /wc-yournext/);
 });
 
 test("mini shows the live indicator only when a live match is in the deck", () => {

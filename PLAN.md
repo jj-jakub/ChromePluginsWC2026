@@ -59,10 +59,23 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 ---
 
 **The 1.0 roadmap above is complete** — all 21 features shipped across 7 batches, each with pure
-unit-tested logic and an adversarial multi-agent review (findings verified + fixed). 137 tests pass.
+unit-tested logic and an adversarial multi-agent review (findings verified + fixed). 156 tests pass.
 Next work is the deferred / fast-follow list below.
 
+## Post-1.0 — shipped
+- [x] **Schematic pitch view (⛶)** — pure `pitch.js` (`formationFor`/`parseFormation`/`layout`/
+      `passPath`/`ballAt`; viewBox 100×64, formation-derived positions) + `pitch-anim.js` (the only
+      non-pure content helper: rAF ball-along-pass-path + idle player bob, reduced-motion static,
+      cancels before each re-render). New `pitchBody` builder in `render.js`; a third full-panel mode
+      alongside table/agenda in `content.js` + `popup.js`; `.wc-pitch` SVG styles with an
+      all:initial-safe `:where(svg, svg *)` reset exclusion. **Deliberately illustrative** — labelled
+      "Schematic — illustrative positions, not live tracking" because no free/affordable live
+      pass-or-tracking feed exists for WC2026 (see CLAUDE.md "Pitch view is schematic" decision).
+      Adversarial multi-agent review: 9 findings (all low/nit), the concrete ones fixed.
+
 ## Deferred (post-1.0)
+- **Pitch demo-replay mode** — feed `pitch-anim` real open tracking frames (SkillCorner A-League
+  10fps MIT / Metrica samples) as a clearly-non-WC2026 "demo match" to showcase real movement.
 - Knockout bracket view (empty until group stage ends; season fetch lands it cheaply later).
 - Head-to-head line (free-tier past window rarely contains a prior meeting).
 - Team-tint accent strip; compact-density peek; share-match-to-clipboard; first-run onboarding.

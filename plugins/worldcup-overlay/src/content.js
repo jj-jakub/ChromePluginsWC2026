@@ -43,6 +43,9 @@
   let standings = null; // { group, rows, partial, loading, error }
   let standingsSeq = 0; // recency token so a stale standings response can't clobber a fresher one
   let agendaMode = false; // showing the all-fixtures agenda list instead of a single match
+  let pitchMode = false; // showing the schematic top-down pitch instead of a single match
+  let pitchStartMs = null; // animation epoch, so the loop stays continuous across re-renders
+  let pitchCancel = null; // stop fn for the running pitch rAF loop (null when not animating)
   let flash = null; // { ids:[matchId] } — a fresh score change to pulse
   let flashTimer = null;
   let blocked = false; // per-site allow/deny: true => hidden on this host
@@ -122,7 +125,7 @@
   function focusedSelector() {
     const a = document.activeElement;
     if (!a || !root.contains(a) || !a.classList) return null;
-    for (const c of ["wc-refresh", "wc-min", "wc-favfilter", "wc-tabletoggle", "wc-agendatoggle", "wc-mini", "wc-count"]) {
+    for (const c of ["wc-refresh", "wc-min", "wc-favfilter", "wc-tabletoggle", "wc-agendatoggle", "wc-pitchtoggle", "wc-mini", "wc-count"]) {
       if (a.classList.contains(c)) return "." + c;
     }
     if (a.classList.contains("wc-arrow")) return `.wc-arrow[data-dir="${a.getAttribute("data-dir")}"]`;
@@ -141,6 +144,12 @@
 
   // ---- render + wire events ----
   function render() {
+    // Always stop a running pitch loop first — the host innerHTML is about to be replaced, which
+    // would otherwise leave a rAF writing to detached nodes. Restarted below if still in pitch mode.
+    if (pitchCancel) {
+      pitchCancel();
+      pitchCancel = null;
+    }
     if (blocked) return; // hidden on this site — nothing to draw
     const keepFocus = focusedSelector();
     const now = Date.now();
@@ -159,12 +168,15 @@
     }
     const vd = viewDeck();
     if (vd.length && (cursor == null || cursor >= vd.length)) cursor = clampPrimaryToView(vd);
+    // The pitch shows one specific match; if the view emptied out OR a fetch error hid the toggle
+    // (gated on !loadError && deck.length), drop back so the user can't be stranded in the pitch.
+    if (pitchMode && (loadError || !vd.length)) pitchMode = false;
 
     cardHost.innerHTML = WC.render.card(
       {
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health,
         favorites: settings.favorites, favFilter, canFilter,
-        mode: agendaMode ? "agenda" : tableMode ? "table" : "match",
+        mode: pitchMode ? "pitch" : agendaMode ? "agenda" : tableMode ? "table" : "match",
         standings, canTable: tableMode || !!currentGroup(), flash,
         icon: ICON,
       },
@@ -194,6 +206,8 @@
     if (tableBtn) tableBtn.addEventListener("click", () => toggleTable());
     const agendaBtn = root.querySelector(".wc-agendatoggle");
     if (agendaBtn) agendaBtn.addEventListener("click", () => toggleAgenda());
+    const pitchBtn = root.querySelector(".wc-pitchtoggle");
+    if (pitchBtn) pitchBtn.addEventListener("click", () => togglePitch());
     root.querySelectorAll(".wc-agrow").forEach((b) =>
       b.addEventListener("click", () => jumpToMatch(b.dataset.id))
     );
@@ -201,6 +215,12 @@
     if (cal) cal.addEventListener("click", () => downloadIcs(cal.dataset.id));
 
     restoreFocus(keepFocus);
+
+    // Drive the schematic pitch animation (ball along the pass path + gentle player drift). The
+    // canceller is stored so the next render()/mode-change stops it before the nodes are replaced.
+    if (pitchMode && WC.pitchAnim) {
+      pitchCancel = WC.pitchAnim.run(cardHost, currentMatch(), pitchStartMs);
+    }
   }
 
   // ---- actions ----
@@ -244,7 +264,8 @@
     }
     const group = currentGroup();
     if (!group) return;
-    agendaMode = false; // the two full-screen modes are mutually exclusive
+    agendaMode = false; // the full-screen modes are mutually exclusive
+    pitchMode = false;
     tableMode = true;
     tableGroup = group;
     standings = { group, loading: true };
@@ -255,9 +276,27 @@
   function toggleAgenda() {
     agendaMode = !agendaMode;
     if (agendaMode) {
-      tableMode = false; // mutually exclusive with the table
+      tableMode = false; // mutually exclusive with the table + pitch
+      pitchMode = false;
       standings = null;
     }
+    render();
+  }
+
+  // Flip to / from the schematic top-down pitch for the currently-featured match. Stamps a fresh
+  // animation epoch on entry so the ball loop starts from the top of its cycle.
+  function togglePitch() {
+    if (pitchMode) {
+      pitchMode = false;
+      render();
+      return;
+    }
+    if (!currentMatch()) return;
+    tableMode = false; // mutually exclusive with the table + agenda
+    standings = null;
+    agendaMode = false;
+    pitchMode = true;
+    pitchStartMs = Date.now();
     render();
   }
 
@@ -365,6 +404,12 @@
     if (pollId) clearInterval(pollId);
     if (tickId) clearInterval(tickId);
     pollId = tickId = null;
+    // A dead-context teardown skips any further render(), so stop the pitch rAF here too — otherwise
+    // it would keep animating the orphaned widget forever.
+    if (pitchCancel) {
+      pitchCancel();
+      pitchCancel = null;
+    }
   }
 
   function requestState(force) {
@@ -493,10 +538,10 @@
       const action = WC.keymap ? WC.keymap.keyToAction(e.key, { minimized, isRtl }) : null;
       if (!action) return;
       e.preventDefault();
-      if (action === "earlier" && !tableMode && !agendaMode) {
+      if (action === "earlier" && !tableMode && !agendaMode && !pitchMode) {
         rotate(-1);
         focusSel('.wc-arrow[data-dir="-1"]');
-      } else if (action === "later" && !tableMode && !agendaMode) {
+      } else if (action === "later" && !tableMode && !agendaMode && !pitchMode) {
         rotate(1);
         focusSel('.wc-arrow[data-dir="1"]');
       } else if (action === "minimize" && !minimized) {

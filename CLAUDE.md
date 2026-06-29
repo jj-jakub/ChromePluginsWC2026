@@ -13,13 +13,15 @@ creds on this machine, so push over SSH).
 
 ## Plugins
 - **worldcup-overlay** — feature-rich (favorites, group table, form, agenda, live-minute, calendar
-  export, score-pulse, opt-in notifications, toolbar badge). A floating widget pinned to a
+  export, score-pulse, opt-in notifications, toolbar badge, schematic pitch view). A floating widget pinned to a
   **configurable corner of every page**
   showing FIFA World Cup 2026: the live match, else next fixture, else last result. Country flags,
   ‹ › arrows to rotate the whole match deck, a counter that jumps back to "current", a manual
   ↻ refresh, and minimize-to-ball. **Follow nations with the ★** — a favorite's match becomes the
   default and gets a favorites-only filter + a "Your next" line. **☰ flips to the live group
-  table** (computed from results). Also ships a **toolbar popup**
+  table** (computed from results); **⛶ flips to a top-down pitch** — formation-placed players +
+  an animated ball, clearly labelled *schematic* (no real player-tracking data is obtainable; see
+  the data-availability decision below). Also ships a **toolbar popup**
   (same card on icon-click) and an **options page** (corner, start-minimized, refresh interval;
   `chrome.storage.sync`). Confirmed working in Chrome.
 
@@ -51,14 +53,16 @@ src/
   ui-logic.js        self.WC.ui — PURE resolveTheme (auto/light/dark)
   keymap.js          self.WC.keymap — PURE keyToAction (←/→/Esc/R/Enter, RTL-aware)
   position.js        self.WC.position — PURE nearestCorner / clampToViewport (drag snap)
-  render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda); reused by the popup
-  content.js         inject isolated widget; settings/theme/dir/site-rules; render the deck; rotate / refresh / minimize / drag / keyboard
-  content.css        scoped styles (+ .wc-pos-* corners, .wc-theme-light, focus/reduced-motion/forced-colors, [dir=rtl])
+  pitch.js           self.WC.pitch — PURE formationFor / parseFormation / layout / passPath / ballAt (schematic top-down positions; viewBox 100×64)
+  render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda / pitch); reused by the popup
+  pitch-anim.js      self.WC.pitchAnim.run — DOM rAF runner (the ONLY non-pure content helper): ball along passPath + idle player bob; reduced-motion static; returns cancel() (called before each re-render)
+  content.js         inject isolated widget; settings/theme/dir/site-rules; render the deck; rotate / refresh / minimize / drag / keyboard / pitch
+  content.css        scoped styles (+ .wc-pos-* corners, .wc-theme-light, focus/reduced-motion/forced-colors, [dir=rtl], .wc-pitch SVG)
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
 _locales/{en,es,fr,de,pt}/messages.json   i18n catalogs (en complete; others fall back to en)
-test/                node --test (137 cases) — every PURE module; run `cd plugins/worldcup-overlay && node --test`
+test/                node --test (156 cases) — every PURE module; run `cd plugins/worldcup-overlay && node --test`
 scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/workflows/ci.yml runs tests+validate+package
 ```
 
@@ -83,11 +87,27 @@ scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/wo
   enabled) fires `chrome.notifications` after each refresh.
 - The pure logic (`wc-state.js`) and content helpers (`format.js`/`flags.js`) are deliberately
   `chrome`/network-free so they stay unit-testable.
+- **Pitch view is *schematic*, by necessity.** A 2026 data-availability review (4-angle web
+  research + verification) confirmed no free or hobby-affordable source provides live pass or
+  per-player tracking data for WC2026: it's FIFA-owned/closed, or sold only by Stats Perform/Opta
+  (the exclusive WC2026 rights holder), Wyscout, Second Spectrum/Genius under enterprise contracts.
+  TheSportsDB has **zero** coordinate data at every tier. So `pitch.js` derives positions from each
+  side's formation (real or name-hashed default) and `pitch-anim.js` animates an illustrative pass
+  loop — the UI labels it "Schematic — illustrative positions, not live tracking." The animation
+  engine (`ballAt` + bob) is generic enough to replay real open-data frames (e.g. SkillCorner
+  A-League, MIT) as a future demo mode.
 
 ## Gotchas learned (don't rediscover these)
 - **`all: initial` disables color inheritance.** The CSS reset means EVERY text element must set
   its own `color`, or it renders **black** (was black-on-green until fixed). Watch this for any
   injected UI.
+- **`all: initial` also collapses SVG geometry.** `cx/cy/r/x/y/width/height` are SVG2 *CSS*
+  properties, so the reset zeroes them and the diagram vanishes. Fix: the reset selector is
+  `#wc-overlay-root *:not(:where(svg, svg *))` — `:where()` is zero-specificity, so the SVG subtree
+  is excluded while the selector stays exactly `(1,0,0)` and every existing per-element class rule
+  still wins. Excluding the subtree also un-shields it from host-page CSS, so `.wc-pitch *` restates
+  `transition/animation: none` (a page-wide `* { transition: all }` would otherwise smear the rAF
+  transforms) and `.wc-pitch` restates `box-sizing: border-box`.
 - **Content scripts can't use ES modules from the manifest.** Hence the `self.WC` namespace
   shared across `format.js`/`flags.js`/`settings.js`/`render.js`/`content.js` (loaded in that
   order). Any pure helper both worlds need is either a classic `self.WC` file tested via the

@@ -26,6 +26,9 @@
   "ariaToggleFixtures": { "message": "Toggle fixtures list" },
   "ariaToggleTable": { "message": "Toggle group table" },
   "ariaToggleFavorites": { "message": "Toggle favorites only" },
+  "ariaTogglePitch": { "message": "Toggle pitch view" },
+  "titlePitchView": { "message": "Pitch view" },
+  "pitchSchematic": { "message": "Schematic — illustrative positions, not live tracking." },
   "followTeam": { "message": "Follow" },
   "unfollowTeam": { "message": "Unfollow" },
 

@@ -44,7 +44,9 @@
         "src/ui-logic.js",
         "src/keymap.js",
         "src/position.js",
+        "src/pitch.js",
         "src/render.js",
+        "src/pitch-anim.js",
         "src/content.js"
       ],
       "run_at": "document_idle"

@@ -3,8 +3,12 @@
    disables color inheritance, so EVERY text element must set its own `color` explicitly —
    otherwise it falls back to the CSS initial value (black) and renders black-on-green. */
 
+/* The reset deliberately skips the pitch <svg> and its descendants: `all: initial` would reset the
+   SVG2 geometry properties (cx/cy/r/x/y/width/height) that the markings & player tokens rely on,
+   collapsing the diagram. `:not(:where(...))` excludes them while keeping the selector's specificity
+   at exactly id+universal — so every per-element class rule below still overrides it as before. */
 #wc-overlay-root,
-#wc-overlay-root * {
+#wc-overlay-root *:not(:where(svg, svg *)) {
   all: initial;
   box-sizing: border-box;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
@@ -428,6 +432,100 @@
   margin-top: 7px;
   color: rgba(255, 255, 255, 0.55);
   font-size: 10px;
+}
+
+/* ---- schematic pitch view (top-down play area) ---- */
+/* toggle icon (gold when active, like the other view toggles) */
+#wc-overlay-root .wc-pitchtoggle { color: rgba(255, 255, 255, 0.82); font-size: 13px; }
+#wc-overlay-root .wc-pitchtoggle.on { color: #ffd23f; }
+
+#wc-overlay-root .wc-pitch-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+#wc-overlay-root .wc-pitch-score .wc-status { margin-bottom: 0; }
+#wc-overlay-root .wc-pitch-teams {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+#wc-overlay-root .wc-pitch-tm {
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+#wc-overlay-root .wc-pitch-tm .wc-flag { font-size: 13px; vertical-align: -1px; }
+#wc-overlay-root .wc-pitch-sc {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+#wc-overlay-root .wc-pitch-wrap { display: block; }
+#wc-overlay-root .wc-pitch {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-sizing: border-box; /* svg is excluded from the all:initial reset, so restate it (border + 100%) */
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  forced-color-adjust: none; /* keep the green pitch + team colors under Windows High Contrast */
+}
+/* The svg subtree opts out of the all:initial reset for geometry's sake, which also unshields it
+   from host-page CSS. Re-neutralize the properties most likely to disrupt the rAF transform writes
+   (e.g. a page-wide `* { transition: all }` would smear every frame). Geometry is left untouched. */
+#wc-overlay-root .wc-pitch,
+#wc-overlay-root .wc-pitch * {
+  transition: none;
+  animation: none;
+}
+/* mowing stripes */
+#wc-overlay-root .wc-stripe-0 { fill: #0c7a3c; }
+#wc-overlay-root .wc-stripe-1 { fill: #0a6e36; }
+/* white pitch markings */
+#wc-overlay-root .wc-pitch-lines rect,
+#wc-overlay-root .wc-pitch-lines line,
+#wc-overlay-root .wc-pitch-lines circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 0.5;
+}
+/* spots live inside .wc-pitch-lines, so out-specify that group's hollow-ring rule to fill solid */
+#wc-overlay-root .wc-pitch-lines circle.wc-pitch-spot { fill: rgba(255, 255, 255, 0.85); stroke: none; }
+/* player tokens — home gold, away blue, dark numerals */
+#wc-overlay-root .wc-pl-dot { stroke: rgba(0, 0, 0, 0.4); stroke-width: 0.35; }
+#wc-overlay-root .wc-pl-h .wc-pl-dot { fill: #ffd23f; }
+#wc-overlay-root .wc-pl-a .wc-pl-dot { fill: #4aa8ff; }
+#wc-overlay-root .wc-pl-num {
+  font-size: 2.7px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+  fill: #06270f;
+}
+#wc-overlay-root .wc-pl-a .wc-pl-num { fill: #052742; }
+/* the ball */
+#wc-overlay-root .wc-pitch-ball circle { fill: #ffffff; stroke: #06270f; stroke-width: 0.35; }
+
+#wc-overlay-root .wc-pitch-note {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  line-height: 1.3;
 }
 
 #wc-overlay-root .wc-foot-wrap { display: block; padding: 4px 13px 11px; }
