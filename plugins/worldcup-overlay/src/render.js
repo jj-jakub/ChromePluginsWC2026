@@ -22,7 +22,7 @@
 
   // Per-team follow ★ — toggles a favorite nation. Always shown (it's how you add favorites).
   function star(name, fav) {
-    const label = (fav ? "Unfollow " : "Follow ") + name;
+    const label = (fav ? t("unfollowTeam", "Unfollow") : t("followTeam", "Follow")) + " " + name;
     return `<button class="wc-star${fav ? " on" : ""}" data-team="${esc(name)}" title="${esc(label)}" aria-label="${esc(label)}" aria-pressed="${fav ? "true" : "false"}">★</button>`;
   }
 
@@ -168,7 +168,7 @@
       const a = m.awayScore == null ? "" : esc(m.awayScore);
       mid = `${h}-${a}`;
     }
-    return `<button class="wc-agrow${live ? " live" : ""}" data-id="${esc(m.id)}" title="Show this match">
+    return `<button class="wc-agrow${live ? " live" : ""}" data-id="${esc(m.id)}" title="${esc(t("titleShowThisMatch", "Show this match"))}">
         <span class="wc-agtime">${esc(time)}</span>
         <span class="wc-agteams">${hf ? `<span class="wc-flag">${hf}</span>` : ""}<span class="wc-agname">${esc(m.home)}</span><b class="wc-agscore">${mid}</b><span class="wc-agname">${esc(m.away)}</span>${af ? `<span class="wc-flag">${af}</span>` : ""}</span>
       </button>`;
@@ -251,30 +251,36 @@
     } else {
       body = matchBody(deck[cursor], now, favorites);
       if (deck.length > 1) {
+        const earlier = esc(t("titleEarlierMatch", "Earlier match"));
+        const later = esc(t("titleLaterMatch", "Later match"));
         nav = `
           <div class="wc-nav">
-            <button class="wc-arrow" data-dir="-1" title="Earlier match" aria-label="Earlier match">‹</button>
-            <button class="wc-count" title="Jump to current">${cursor + 1} / ${deck.length}</button>
-            <button class="wc-arrow" data-dir="1" title="Later match" aria-label="Later match">›</button>
+            <button class="wc-arrow" data-dir="-1" title="${earlier}" aria-label="${earlier}">‹</button>
+            <button class="wc-count" title="${esc(t("titleJumpToCurrent", "Jump to current"))}">${cursor + 1} / ${deck.length}</button>
+            <button class="wc-arrow" data-dir="1" title="${later}" aria-label="${later}">›</button>
           </div>`;
       }
     }
 
     const showMatchT = esc(t("titleShowMatch", "Show match"));
     const agendaBtn = !loadError && deck.length
-      ? `<button type="button" class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? showMatchT : esc(t("titleAllFixtures", "All fixtures"))}" aria-label="Toggle fixtures list" aria-pressed="${agendaMode ? "true" : "false"}">☰</button>`
+      ? `<button type="button" class="wc-icon wc-agendatoggle${agendaMode ? " on" : ""}" title="${agendaMode ? showMatchT : esc(t("titleAllFixtures", "All fixtures"))}" aria-label="${esc(t("ariaToggleFixtures", "Toggle fixtures list"))}" aria-pressed="${agendaMode ? "true" : "false"}">☰</button>`
       : "";
     const tableBtn = canTable
-      ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? showMatchT : esc(t("titleGroupTable", "Group table"))}" aria-label="Toggle group table" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
+      ? `<button type="button" class="wc-icon wc-tabletoggle${tableMode ? " on" : ""}" title="${tableMode ? showMatchT : esc(t("titleGroupTable", "Group table"))}" aria-label="${esc(t("ariaToggleTable", "Toggle group table"))}" aria-pressed="${tableMode ? "true" : "false"}">▦</button>`
       : "";
     const favBtn = canFilter && !tableMode && !agendaMode
-      ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? esc(t("titleShowAll", "Show all matches")) : esc(t("titleFavoritesOnly", "Show favorites only"))}" aria-label="Toggle favorites only" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
+      ? `<button type="button" class="wc-icon wc-favfilter${favFilter ? " on" : ""}" title="${favFilter ? esc(t("titleShowAll", "Show all matches")) : esc(t("titleFavoritesOnly", "Show favorites only"))}" aria-label="${esc(t("ariaToggleFavorites", "Toggle favorites only"))}" aria-pressed="${favFilter ? "true" : "false"}">★</button>`
       : "";
 
     const yourNext = !tableMode && !agendaMode && !loadError && deck.length ? nextFavoriteLine(deck, now) : "";
 
+    const ver =
+      typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.getManifest
+        ? chrome.runtime.getManifest().version
+        : "";
     const foot = fetchedAt
-      ? `<span class="wc-foot">${esc(t("footUpdated", "Updated"))} ${esc(ago(fetchedAt, now))}${stale ? ` · ${esc(t("footOffline", "offline"))}` : ""} · TheSportsDB</span>`
+      ? `<span class="wc-foot">${esc(t("footUpdated", "Updated"))} ${esc(ago(fetchedAt, now))}${stale ? ` · ${esc(t("footOffline", "offline"))}` : ""} · TheSportsDB${ver ? ` · v${esc(ver)}` : ""}</span>`
       : "";
 
     const goal = pulsing ? `<div class="wc-goalflash">⚽ GOAL!</div>` : "";

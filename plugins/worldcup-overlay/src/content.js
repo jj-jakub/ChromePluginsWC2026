@@ -117,13 +117,37 @@
     return m && m.group ? m.group : "";
   }
 
+  // A stable selector for the currently-focused control, so a re-render (30s tick / poll) can put
+  // keyboard focus back where it was instead of dropping it to <body>.
+  function focusedSelector() {
+    const a = document.activeElement;
+    if (!a || !root.contains(a) || !a.classList) return null;
+    for (const c of ["wc-refresh", "wc-min", "wc-favfilter", "wc-tabletoggle", "wc-agendatoggle", "wc-mini", "wc-count"]) {
+      if (a.classList.contains(c)) return "." + c;
+    }
+    if (a.classList.contains("wc-arrow")) return `.wc-arrow[data-dir="${a.getAttribute("data-dir")}"]`;
+    return null;
+  }
+  function restoreFocus(sel) {
+    if (!sel) return;
+    const el = cardHost.querySelector(sel);
+    if (!el) return;
+    try {
+      el.focus({ preventScroll: true });
+    } catch (_) {
+      el.focus();
+    }
+  }
+
   // ---- render + wire events ----
   function render() {
     if (blocked) return; // hidden on this site — nothing to draw
+    const keepFocus = focusedSelector();
     const now = Date.now();
     if (minimized) {
       cardHost.innerHTML = WC.render.mini({ deck, icon: ICON });
       cardHost.querySelector(".wc-mini").addEventListener("click", () => setMinimized(false));
+      restoreFocus(keepFocus);
       return;
     }
     const canFilter = deck.some((m) => m.isFavorite);
@@ -175,6 +199,8 @@
     );
     const cal = root.querySelector(".wc-cal");
     if (cal) cal.addEventListener("click", () => downloadIcs(cal.dataset.id));
+
+    restoreFocus(keepFocus);
   }
 
   // ---- actions ----
@@ -379,14 +405,20 @@
   const DRAG_THRESHOLD = 5;
 
   function onPointerDown(e) {
-    if (blocked || e.button != null && e.button !== 0) return;
+    if (blocked || (e.button != null && e.button !== 0)) return;
     const fromHead = e.target.closest(".wc-head") && !e.target.closest("button");
     const fromMini = !!e.target.closest(".wc-mini");
     if (!fromHead && !fromMini) return;
     const rect = root.getBoundingClientRect();
-    drag = { startX: e.clientX, startY: e.clientY, offX: e.clientX - rect.left, offY: e.clientY - rect.top, w: rect.width, h: rect.height, moved: false };
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp, { once: true });
+    drag = { startX: e.clientX, startY: e.clientY, offX: e.clientX - rect.left, offY: e.clientY - rect.top, w: rect.width, h: rect.height, moved: false, pointerId: e.pointerId };
+    // Capture so the terminating pointerup/pointercancel always reaches us even if the pointer
+    // leaves the viewport — otherwise a missed pointerup leaves the widget glued to the cursor.
+    try {
+      root.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    root.addEventListener("pointermove", onPointerMove);
+    root.addEventListener("pointerup", endDrag);
+    root.addEventListener("pointercancel", endDrag);
   }
 
   function onPointerMove(e) {
@@ -404,9 +436,15 @@
     root.style.bottom = "auto";
   }
 
-  function onPointerUp() {
-    window.removeEventListener("pointermove", onPointerMove);
+  // Finalize on pointerup OR pointercancel — snap to the nearest corner if the widget actually moved.
+  function endDrag() {
+    root.removeEventListener("pointermove", onPointerMove);
+    root.removeEventListener("pointerup", endDrag);
+    root.removeEventListener("pointercancel", endDrag);
     if (!drag) return;
+    try {
+      root.releasePointerCapture(drag.pointerId);
+    } catch (_) {}
     if (drag.moved) {
       const rect = root.getBoundingClientRect();
       const corner = WC.position
@@ -451,7 +489,7 @@
   function setupKeyboard() {
     root.addEventListener("keydown", (e) => {
       if (blocked) return;
-      const isRtl = (document.documentElement.dir || document.dir) === "rtl";
+      const isRtl = root.getAttribute("dir") === "rtl"; // the widget's own direction, not the page's
       const action = WC.keymap ? WC.keymap.keyToAction(e.key, { minimized, isRtl }) : null;
       if (!action) return;
       e.preventDefault();
@@ -465,7 +503,8 @@
         setMinimized(true);
         focusSel(".wc-mini");
       } else if (action === "refresh" && !refreshing) {
-        requestState(true);
+        if (tableMode) requestStandings(tableGroup, true);
+        else requestState(true);
         focusSel(".wc-refresh");
       } else if (action === "expand" && minimized) {
         setMinimized(false);

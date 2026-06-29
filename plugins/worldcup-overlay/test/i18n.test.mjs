@@ -15,6 +15,8 @@ const USED = [
   "statusLive", "statusUpNext", "statusFullTime",
   "titleRefresh", "titleMinimize", "titleAllFixtures", "titleShowMatch", "titleGroupTable",
   "titleFavoritesOnly", "titleShowAll", "titleExpand", "titleAddToCalendar", "labelCalendar",
+  "titleEarlierMatch", "titleLaterMatch", "titleJumpToCurrent", "titleShowThisMatch",
+  "ariaToggleFixtures", "ariaToggleTable", "ariaToggleFavorites", "followTeam", "unfollowTeam",
   "yourNext", "footUpdated", "footOffline",
   "emptyNoMatches", "emptyNoFavorites", "emptyError", "emptyNoSchedule", "emptyNoTable",
   "loadingTable", "partialTable", "healthDelayed", "healthDown",

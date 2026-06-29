@@ -19,6 +19,16 @@
   "titleAddToCalendar": { "message": "Add to calendar" },
   "labelCalendar": { "message": "Calendar" },
 
+  "titleEarlierMatch": { "message": "Earlier match" },
+  "titleLaterMatch": { "message": "Later match" },
+  "titleJumpToCurrent": { "message": "Jump to current" },
+  "titleShowThisMatch": { "message": "Show this match" },
+  "ariaToggleFixtures": { "message": "Toggle fixtures list" },
+  "ariaToggleTable": { "message": "Toggle group table" },
+  "ariaToggleFavorites": { "message": "Toggle favorites only" },
+  "followTeam": { "message": "Follow" },
+  "unfollowTeam": { "message": "Unfollow" },
+
   "yourNext": { "message": "Your next:" },
   "footUpdated": { "message": "Updated" },
   "footOffline": { "message": "offline" },

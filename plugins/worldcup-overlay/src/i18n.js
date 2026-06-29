@@ -19,16 +19,25 @@
     return fallback != null ? fallback : key;
   }
 
-  /** The UI direction for the current page ("rtl" on RTL locales/pages, else "ltr"). */
+  /**
+   * The direction the overlay should use. For an injected widget the PAGE's direction is what
+   * matters (so it mirrors on an Arabic/Hebrew site), so prefer that; fall back to the extension
+   * UI locale's @@bidi_dir. Returns "rtl" | "ltr".
+   */
   function dir() {
     try {
-      if (typeof chrome !== "undefined" && chrome.i18n && typeof chrome.i18n.getMessage === "function") {
-        const d = chrome.i18n.getMessage("@@bidi_dir");
-        if (d === "rtl" || d === "ltr") return d;
-      }
+      const d =
+        (document.documentElement && document.documentElement.getAttribute("dir")) ||
+        document.dir ||
+        (document.body && document.body.getAttribute("dir"));
+      if (d === "rtl") return "rtl";
+      if (d === "ltr") return "ltr";
     } catch (_) {}
     try {
-      return document.documentElement.dir === "rtl" || document.dir === "rtl" ? "rtl" : "ltr";
+      if (typeof chrome !== "undefined" && chrome.i18n && typeof chrome.i18n.getMessage === "function") {
+        const b = chrome.i18n.getMessage("@@bidi_dir");
+        if (b === "rtl" || b === "ltr") return b;
+      }
     } catch (_) {}
     return "ltr";
   }

@@ -120,7 +120,9 @@
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area === "sync" && changes[KEY]) {
         current = normalize(changes[KEY].newValue);
-        reflect(current);
+        // Don't re-fill the rules textarea while it's being edited (this page's own debounced
+        // write echoes back through onChanged and would reset the caret).
+        reflect(current, document.activeElement !== $("siteRules"));
       }
     });
   } catch (_) {}

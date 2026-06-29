@@ -463,6 +463,7 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 #wc-overlay-root .wc-mini:hover { transform: scale(1.06); }
+#wc-overlay-root .wc-mini { touch-action: none; } /* let pointermove drag the ball, not scroll */
 #wc-overlay-root .wc-mini img { width: 26px; height: 26px; display: block; }
 #wc-overlay-root .wc-mini .wc-mini-live {
   position: relative;
@@ -513,6 +514,11 @@
   0% { transform: scale(1); color: #ffd23f; }
   50% { transform: scale(1.3); color: #ffd23f; }
   100% { transform: scale(1); color: #ffffff; }
+}
+@keyframes wc-goalpulse-light {
+  0% { transform: scale(1); color: #d99e00; }
+  50% { transform: scale(1.3); color: #d99e00; }
+  100% { transform: scale(1); color: #16271d; }
 }
 /* ---- accessibility ---- */
 /* visible keyboard focus ring (all:initial strips the default outline) */
@@ -582,8 +588,24 @@
 #wc-overlay-root.wc-theme-light .wc-tabletoggle.on { color: #d99e00; } /* gold readable on light */
 #wc-overlay-root.wc-theme-light .wc-yournext { color: #0a6e36; }
 #wc-overlay-root.wc-theme-light .wc-trow.q .wc-tpos { color: #1f9d55; }
+/* qualifying team name: the (1,3,0) base .wc-trow.q .wc-tteam (near-white) out-specifies the
+   universal flip, so re-assert dark here (higher specificity) — was white-on-white */
+#wc-overlay-root.wc-theme-light .wc-trow.q .wc-tteam { color: #0a6e36; }
+/* draw chip keeps white text on a translucent-white fill in light mode -> give it a dark fill */
+#wc-overlay-root.wc-theme-light .wc-chip-d { background: #6b7770; }
+/* live agenda time: red readable on the white card (was low-contrast salmon) */
+#wc-overlay-root.wc-theme-light .wc-agrow.live .wc-agtime { color: #c0392b; }
+/* goal pulse must not flash the score white-on-white in light mode */
+#wc-overlay-root.wc-theme-light .wc-card.wc-goal .wc-score { animation-name: wc-goalpulse-light; }
 #wc-overlay-root.wc-theme-light .wc-goalflash { color: #06270f; } /* gold bg keeps dark text */
 #wc-overlay-root.wc-theme-light .wc-health { color: #5a3d00; }
 #wc-overlay-root.wc-theme-light .wc-health-down { color: #7a1a12; }
+
+/* ---- RTL (mirrors text/flow when the page or extension locale is right-to-left) ----
+   all:initial resets `direction` to ltr on every element, so re-assert it explicitly. */
+#wc-overlay-root[dir="rtl"] .wc-card,
+#wc-overlay-root[dir="rtl"] .wc-card * {
+  direction: rtl;
+}
 
 #wc-overlay-root[hidden] { display: none; }
