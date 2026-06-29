@@ -124,6 +124,13 @@ scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/wo
 - **Load/reload:** `chrome://extensions` → Developer mode → Load unpacked → plugin folder.
   After changes, hit the ↻ reload icon on the card, then refresh a page.
 - **Test:** `cd plugins/worldcup-overlay && node --test`
+- **Visual check (no extension load needed):** generate the card HTML with node (shim `self`, import
+  the `self.WC` content scripts, call `WC.render.card(...)`), write it into a tiny standalone HTML
+  that `<link>`s `src/content.css` under a `#wc-overlay-root` wrapper, then screenshot it headlessly:
+  `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --screenshot=out.png
+  --force-device-scale-factor=2 file://…`. Renders the real cascade (incl. `all:initial` + SVG) so
+  you can catch contrast/spacing/SVG bugs — render both `wc-theme-light`/`wc-theme-dark`. Caught the
+  pitch-dot + agenda-name contrast bugs this way. (Static only — no chrome APIs / behaviour.)
 - **Validate manifest:** `python3 -c "import json; json.load(open('plugins/<name>/manifest.json'))"`
 - **Package:** `scripts/package.sh <name>` → `dist/<name>.zip` (tests excluded).
 - **New plugin:** `cp -r plugins/_template plugins/<name>`; see `docs/adding-a-plugin.md`.
