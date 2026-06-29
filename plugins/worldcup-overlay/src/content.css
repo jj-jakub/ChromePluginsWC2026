@@ -375,11 +375,24 @@
   overflow: hidden;
 }
 #wc-overlay-root .wc-agteams .wc-flag { font-size: 12px; vertical-align: -1px; }
-#wc-overlay-root .wc-agname { overflow: hidden; text-overflow: ellipsis; }
-#wc-overlay-root .wc-agscore {
+/* all:initial strips inheritance, so these inner spans must restate color/size/nowrap themselves —
+   otherwise the names render black, 16px and wrapping (was a dark-theme-only bug). */
+#wc-overlay-root .wc-agname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
   color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+#wc-overlay-root .wc-agscore {
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   padding: 0 2px;
 }
 
@@ -505,18 +518,18 @@
 }
 /* spots live inside .wc-pitch-lines, so out-specify that group's hollow-ring rule to fill solid */
 #wc-overlay-root .wc-pitch-lines circle.wc-pitch-spot { fill: rgba(255, 255, 255, 0.85); stroke: none; }
-/* player tokens — home gold, away blue, dark numerals */
-#wc-overlay-root .wc-pl-dot { stroke: rgba(0, 0, 0, 0.4); stroke-width: 0.35; }
-#wc-overlay-root .wc-pl-h .wc-pl-dot { fill: #ffd23f; }
-#wc-overlay-root .wc-pl-a .wc-pl-dot { fill: #4aa8ff; }
+/* player tokens — home gold, away blue, dark numerals; a white halo separates them from the grass */
+#wc-overlay-root .wc-pl-dot { stroke: rgba(255, 255, 255, 0.9); stroke-width: 0.5; }
+#wc-overlay-root .wc-pl-h .wc-pl-dot { fill: #ffcf2e; }
+#wc-overlay-root .wc-pl-a .wc-pl-dot { fill: #3d8bff; }
 #wc-overlay-root .wc-pl-num {
-  font-size: 2.7px;
+  font-size: 3.1px;
   font-weight: 800;
   text-anchor: middle;
   dominant-baseline: central;
   fill: #06270f;
 }
-#wc-overlay-root .wc-pl-a .wc-pl-num { fill: #052742; }
+#wc-overlay-root .wc-pl-a .wc-pl-num { fill: #ffffff; }
 /* the ball */
 #wc-overlay-root .wc-pitch-ball circle { fill: #ffffff; stroke: #06270f; stroke-width: 0.35; }
 

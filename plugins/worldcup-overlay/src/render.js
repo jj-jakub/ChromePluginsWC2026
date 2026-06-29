@@ -232,7 +232,7 @@
 
   // One player token: a translated <g> carrying its base coords so pitch-anim.js can bob it.
   function pitchToken(p, side) {
-    return `<g class="wc-pl wc-pl-${side}" data-x="${p.x}" data-y="${p.y}" transform="translate(${p.x} ${p.y})"><circle class="wc-pl-dot" r="2.6"></circle><text class="wc-pl-num" x="0" y="0">${esc(p.n)}</text></g>`;
+    return `<g class="wc-pl wc-pl-${side}" data-x="${p.x}" data-y="${p.y}" transform="translate(${p.x} ${p.y})"><circle class="wc-pl-dot" r="3.2"></circle><text class="wc-pl-num" x="0" y="0">${esc(p.n)}</text></g>`;
   }
 
   /** Top-down schematic pitch for one match. Positions come from WC.pitch (formation-derived). */
@@ -259,7 +259,7 @@
         <circle class="wc-pitch-spot" cx="89" cy="32" r="0.6"></circle>
       </g>`;
     const players = lay.home.map((p) => pitchToken(p, "h")).join("") + lay.away.map((p) => pitchToken(p, "a")).join("");
-    const ball = `<g class="wc-pitch-ball" transform="translate(${b0.x} ${b0.y})"><circle r="1.7"></circle></g>`;
+    const ball = `<g class="wc-pitch-ball" transform="translate(${b0.x} ${b0.y})"><circle r="2"></circle></g>`;
     const label = esc(t("titlePitchView", "Pitch view"));
     return `${pitchScoreline(m, now)}
       <div class="wc-pitch-wrap">
