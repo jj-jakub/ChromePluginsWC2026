@@ -317,6 +317,11 @@ test("pitch mode suppresses the favorites filter and the 'Your next' line", () =
   assert.doesNotMatch(html, /wc-yournext/);
 });
 
+test("card renders the resize grip only when resizable (overlay), not by default (popup)", () => {
+  assert.match(card({ deck: [m({ matchMode: "live" })], cursor: 0, resizable: true, icon: "i" }, NOW), /wc-resize/);
+  assert.doesNotMatch(card({ deck: [m({ matchMode: "live" })], cursor: 0, icon: "i" }, NOW), /wc-resize/);
+});
+
 test("mini shows the live indicator only when a live match is in the deck", () => {
   assert.match(mini({ deck: [m({ matchMode: "live" })], icon: "i.png" }), /wc-mini-live/);
   assert.doesNotMatch(mini({ deck: [m({ matchMode: "upcoming" })], icon: "i.png" }), /wc-mini-live/);

@@ -67,7 +67,10 @@
   root.appendChild(announcer);
 
   // The card/mini markup is swapped into this host; the announcer above is never overwritten.
+  // inline-block so the user's resize zoom (applied in applyChrome) shrinks-to-fit the card cleanly
+  // and the root, sized to it, stays pinned at its anchored corner as it grows.
   const cardHost = document.createElement("div");
+  cardHost.style.display = "inline-block";
   root.appendChild(cardHost);
 
   const darkMql = (() => {
@@ -86,6 +89,7 @@
     const theme = WC.ui ? WC.ui.resolveTheme(settings.theme, darkMql ? darkMql.matches : false) : "dark";
     root.classList.remove("wc-theme-light", "wc-theme-dark");
     root.classList.add("wc-theme-" + theme);
+    cardHost.style.zoom = String(settings.scale || 1); // user's resize (drag a corner). zoom reflows crisply
   }
 
   // Per-site allow/deny: hide the whole widget where the user excluded it (no new permission —
@@ -178,7 +182,7 @@
         favorites: settings.favorites, favFilter, canFilter,
         mode: pitchMode ? "pitch" : agendaMode ? "agenda" : tableMode ? "table" : "match",
         standings, canTable: tableMode || !!currentGroup(), flash,
-        icon: ICON,
+        icon: ICON, resizable: true,
       },
       now
     );
@@ -451,6 +455,10 @@
 
   function onPointerDown(e) {
     if (blocked || (e.button != null && e.button !== 0)) return;
+    if (e.target.closest(".wc-resize")) {
+      startResize(e);
+      return;
+    }
     const fromHead = e.target.closest(".wc-head") && !e.target.closest("button");
     const fromMini = !!e.target.closest(".wc-mini");
     if (!fromHead && !fromMini) return;
@@ -507,6 +515,68 @@
       }, 60);
     }
     drag = null;
+  }
+
+  // Drag-to-resize: grab the corner grip (rendered opposite the anchored corner) to zoom the whole
+  // widget. The chosen factor persists to settings.scale (clamped/rounded by settings.normalize) and
+  // is re-applied in applyChrome. Pure math lives in position.js; here we translate pointer movement
+  // into a live zoom on cardHost. zoom (not transform) keeps text crisp and the anchored corner pinned.
+  const SCALE_MIN = settingsApi.SCALE_MIN; // content-side mirror of the settings.js clamp
+  const SCALE_MAX = settingsApi.SCALE_MAX;
+  let resize = null;
+
+  function startResize(e) {
+    const corner = settings.corner;
+    const rect = root.getBoundingClientRect(); // current (zoomed) visual box
+    const cur = settings.scale || 1;
+    const v = WC.position.resizeVector(corner);
+    resize = {
+      anchorX: corner === "tl" || corner === "bl" ? rect.left : rect.right,
+      anchorY: corner === "tl" || corner === "tr" ? rect.top : rect.bottom,
+      baseW: rect.width / cur,
+      baseH: rect.height / cur,
+      signX: v.signX,
+      signY: v.signY,
+      pointerId: e.pointerId,
+      last: cur,
+    };
+    try {
+      root.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    root.addEventListener("pointermove", onResizeMove);
+    root.addEventListener("pointerup", endResize);
+    root.addEventListener("pointercancel", endResize);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  function onResizeMove(e) {
+    if (!resize) return;
+    const s = WC.position.scaleFromDrag({
+      anchorX: resize.anchorX, anchorY: resize.anchorY,
+      pointerX: e.clientX, pointerY: e.clientY,
+      baseW: resize.baseW, baseH: resize.baseH,
+      signX: resize.signX, signY: resize.signY,
+      min: SCALE_MIN, max: SCALE_MAX,
+    });
+    resize.last = s;
+    cardHost.style.zoom = String(s); // live preview; persisted on release
+  }
+
+  function endResize() {
+    root.removeEventListener("pointermove", onResizeMove);
+    root.removeEventListener("pointerup", endResize);
+    root.removeEventListener("pointercancel", endResize);
+    if (!resize) return;
+    try {
+      root.releasePointerCapture(resize.pointerId);
+    } catch (_) {}
+    settings = settingsApi.normalize({ ...settings, scale: resize.last });
+    cardHost.style.zoom = String(settings.scale); // snap to the rounded/clamped stored value
+    try {
+      chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
+    } catch (_) {}
+    resize = null;
   }
 
   function setupDrag() {

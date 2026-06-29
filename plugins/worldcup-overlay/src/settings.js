@@ -22,11 +22,14 @@
   const REFRESH_MAX = 30; // minutes; config: SETTINGS.REFRESH_MAX_MINUTES
   const LEAD_MIN = 1;
   const LEAD_MAX = 120;
+  const SCALE_MIN = 0.8; // widget zoom factor — drag a corner to resize (content-only; not in config)
+  const SCALE_MAX = 2.0;
 
   const DEFAULTS = {
     corner: "tr", // matches the historical top-right default
     theme: "auto",
     density: "comfortable",
+    scale: 1, // 1.0 = native size; clamped to [SCALE_MIN, SCALE_MAX]
     startMinimized: false,
     refreshMins: 2, // matches config ALARM.PERIOD_MIN
     favorites: [], // nation names, e.g. ["Brazil", "England"]
@@ -50,6 +53,13 @@
     const n = Math.round(Number(v));
     if (!Number.isFinite(n)) return dflt;
     return Math.min(hi, Math.max(lo, n));
+  };
+
+  // Float clamp for the zoom factor; rounds to 2 dp so a drag can't persist 1.2999999.
+  const clampScale = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return DEFAULTS.scale;
+    return Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, n)) * 100) / 100;
   };
 
   // Clean a string list: keep strings, trim, drop blanks, de-dupe (case-insensitive), preserve order.
@@ -78,6 +88,7 @@
       corner: oneOf(r.corner, CORNERS, d.corner),
       theme: oneOf(r.theme, THEMES, d.theme),
       density: oneOf(r.density, DENSITIES, d.density),
+      scale: clampScale(r.scale),
       startMinimized: bool(r.startMinimized, d.startMinimized),
       refreshMins: clampInt(r.refreshMins, REFRESH_MIN, REFRESH_MAX, d.refreshMins),
       favorites: cleanList(r.favorites),
@@ -104,5 +115,7 @@
     DENSITIES,
     REFRESH_MIN,
     REFRESH_MAX,
+    SCALE_MIN,
+    SCALE_MAX,
   };
 })();

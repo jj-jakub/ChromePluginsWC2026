@@ -52,17 +52,17 @@ src/
   site-match.js      self.WC.site — PURE siteAllowed / ruleMatches (per-site allow/deny)
   ui-logic.js        self.WC.ui — PURE resolveTheme (auto/light/dark)
   keymap.js          self.WC.keymap — PURE keyToAction (←/→/Esc/R/Enter, RTL-aware)
-  position.js        self.WC.position — PURE nearestCorner / clampToViewport (drag snap)
+  position.js        self.WC.position — PURE nearestCorner / clampToViewport (drag snap) + resizeVector / scaleFromDrag (drag-to-resize zoom)
   pitch.js           self.WC.pitch — PURE formationFor / parseFormation / layout / passPath / ballAt (schematic top-down positions; viewBox 100×64)
   render.js          self.WC.render — PURE HTML builders (card / mini / matchBody / standings / agenda / pitch); reused by the popup
   pitch-anim.js      self.WC.pitchAnim.run — DOM rAF runner (the ONLY non-pure content helper): ball along passPath + idle player bob; reduced-motion static; returns cancel() (called before each re-render)
   content.js         inject isolated widget; settings/theme/dir/site-rules; render the deck; rotate / refresh / minimize / drag / keyboard / pitch
-  content.css        scoped styles (+ .wc-pos-* corners, .wc-theme-light, focus/reduced-motion/forced-colors, [dir=rtl], .wc-pitch SVG)
+  content.css        scoped styles (+ .wc-pos-* corners, .wc-theme-light, focus/reduced-motion/forced-colors, [dir=rtl], .wc-pitch SVG, .wc-resize grip)
   ── extension pages (own documents; normal CSS, no all:initial) ──
   options.html/js/css  settings UI → chrome.storage.sync (via settings.normalize)
   popup.html/js/css    toolbar action popup; reuses content.css + render.js in a #wc-overlay-root wrapper
 _locales/{en,es,fr,de,pt}/messages.json   i18n catalogs (en complete; others fall back to en)
-test/                node --test (156 cases) — every PURE module; run `cd plugins/worldcup-overlay && node --test`
+test/                node --test (165 cases) — every PURE module; run `cd plugins/worldcup-overlay && node --test`
 scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/workflows/ci.yml runs tests+validate+package
 ```
 
@@ -108,6 +108,16 @@ scripts/validate-manifest.mjs   PURE manifest validator (CI + local); .github/wo
   still wins. Excluding the subtree also un-shields it from host-page CSS, so `.wc-pitch *` restates
   `transition/animation: none` (a page-wide `* { transition: all }` would otherwise smear the rAF
   transforms) and `.wc-pitch` restates `box-sizing: border-box`.
+- **Drag-to-resize uses CSS `zoom`, not `transform: scale`.** A hover-revealed grip at the corner
+  opposite the anchor drives `cardHost.style.zoom = settings.scale` (clamped 0.8–2.0 in
+  `settings.normalize`). `zoom` was chosen over `transform` because it (a) reflows so text stays
+  crisp, and (b) changes layout size, so the corner-anchored `position:fixed` root stays pinned and
+  grows into the viewport with **no** transform-origin/reposition math. Inline `style.zoom` beats the
+  `all:initial` reset. Resize and reposition are mutually exclusive per pointerdown (grip vs header).
+- **Long nation names wrap, they don't truncate.** Team names use `white-space:normal` +
+  `overflow-wrap:break-word` (not ellipsis) so e.g. "Bosnia and Herzegovina" is always fully visible;
+  resizing scales everything but never reveals more characters, so wrapping is the real fix. The
+  agenda stacks the two teams vertically (home over away) to give each name the full row width.
 - **Content scripts can't use ES modules from the manifest.** Hence the `self.WC` namespace
   shared across `format.js`/`flags.js`/`settings.js`/`render.js`/`content.js` (loaded in that
   order). Any pure helper both worlds need is either a classic `self.WC` file tested via the

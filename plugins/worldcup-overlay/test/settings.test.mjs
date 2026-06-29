@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 // settings.js is a classic content-script attaching to self.WC. Shim self, then load it.
 globalThis.self = globalThis;
 await import(new URL("../src/settings.js", import.meta.url));
-const { DEFAULTS, normalize, REFRESH_MIN, REFRESH_MAX } = globalThis.WC.settings;
+const { DEFAULTS, normalize, REFRESH_MIN, REFRESH_MAX, SCALE_MIN, SCALE_MAX } = globalThis.WC.settings;
 
 test("normalize(undefined/garbage) returns the full defaults", () => {
   assert.deepEqual(normalize(undefined), DEFAULTS);
@@ -57,6 +57,19 @@ test("normalize deep-merges the notify sub-object", () => {
   assert.equal(out.notify.enabled, true);
   assert.equal(out.notify.leadMins, 120); // clamped to LEAD_MAX
   assert.equal(out.notify.kickoff, DEFAULTS.notify.kickoff); // untouched sub-field default
+});
+
+test("normalize clamps + rounds the widget scale", () => {
+  assert.equal(normalize({}).scale, DEFAULTS.scale); // 1 by default
+  assert.equal(normalize({ scale: 0.1 }).scale, SCALE_MIN); // below min
+  assert.equal(normalize({ scale: 9 }).scale, SCALE_MAX); // above max
+  assert.equal(normalize({ scale: 1.337 }).scale, 1.34); // rounded to 2dp
+  assert.equal(normalize({ scale: "1.5" }).scale, 1.5); // numeric string coerces
+  assert.equal(normalize({ scale: "huge" }).scale, DEFAULTS.scale); // NaN -> default
+  const rounded = normalize({ scale: 1.337 });
+  assert.equal(rounded.scale, 1.34); // rounds to 2dp
+  assert.equal(normalize(rounded).scale, 1.34); // and re-normalizing the rounded value is stable
+  assert.ok(SCALE_MIN < SCALE_MAX);
 });
 
 test("normalize is idempotent", () => {

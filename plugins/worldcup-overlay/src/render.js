@@ -154,23 +154,23 @@
     return `<div class="wc-table">${head}${rows}${note}</div>`;
   }
 
-  // One fixture row in the agenda list; clicking it jumps to that match (data-id).
+  // One team line within an agenda row: flag · name (wraps) · score.
+  function agendaTeamLine(name, score, win) {
+    const flag = flagOf(name);
+    return `<span class="wc-agteam${win ? " win" : ""}">${flag ? `<span class="wc-flag">${flag}</span>` : ""}<span class="wc-agname">${esc(name)}</span><span class="wc-agscore">${score}</span></span>`;
+  }
+
+  // One fixture in the agenda list — home over away so long names get the full row width to wrap
+  // into. Clicking it jumps to that match (data-id).
   function agendaRow(m) {
     const live = m.matchMode === "live";
     const time = live ? "LIVE" : m.kickoffMs ? clock(m.kickoffMs) : "";
-    const hf = flagOf(m.home);
-    const af = flagOf(m.away);
-    let mid;
-    if (m.matchMode === "upcoming") {
-      mid = "v";
-    } else {
-      const h = m.homeScore == null ? "" : esc(m.homeScore);
-      const a = m.awayScore == null ? "" : esc(m.awayScore);
-      mid = `${h}-${a}`;
-    }
+    const scored = m.matchMode !== "upcoming" && m.homeScore != null && m.awayScore != null;
+    const hs = scored ? esc(m.homeScore) : "";
+    const as = scored ? esc(m.awayScore) : "";
     return `<button class="wc-agrow${live ? " live" : ""}" data-id="${esc(m.id)}" title="${esc(t("titleShowThisMatch", "Show this match"))}">
         <span class="wc-agtime">${esc(time)}</span>
-        <span class="wc-agteams">${hf ? `<span class="wc-flag">${hf}</span>` : ""}<span class="wc-agname">${esc(m.home)}</span><b class="wc-agscore">${mid}</b><span class="wc-agname">${esc(m.away)}</span>${af ? `<span class="wc-flag">${af}</span>` : ""}</span>
+        <span class="wc-agteams">${agendaTeamLine(m.home, hs, scored && m.homeScore > m.awayScore)}${agendaTeamLine(m.away, as, scored && m.awayScore > m.homeScore)}</span>
       </button>`;
   }
 
@@ -293,6 +293,7 @@
       deck = [], fetchedAt, stale, refreshing, loadError, health,
       favorites = [], favFilter = false, canFilter = false,
       mode = "match", standings = null, canTable = false, flash = null, icon = "",
+      resizable = false,
     } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
@@ -357,6 +358,11 @@
       : "";
 
     const goal = pulsing ? `<div class="wc-goalflash">⚽ GOAL!</div>` : "";
+    // Drag-to-resize grip (overlay only — the popup is a fixed window). CSS places it at the corner
+    // opposite the widget's anchor and content.js drives the zoom from a pointer drag.
+    const grip = resizable
+      ? `<div class="wc-resize" title="${esc(t("titleResize", "Drag to resize"))}" aria-hidden="true"></div>`
+      : "";
 
     return `
       <div class="wc-card${pulsing ? " wc-goal" : ""}">
@@ -375,6 +381,7 @@
         <div class="wc-body">${body}</div>
         ${nav}
         <div class="wc-foot-wrap">${yourNext}${foot}</div>
+        ${grip}
       </div>`;
   }
 

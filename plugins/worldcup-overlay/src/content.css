@@ -34,6 +34,7 @@
 /* ---- full card ---- */
 #wc-overlay-root .wc-card {
   display: block;
+  position: relative; /* anchors the absolutely-positioned resize grip */
   width: 264px;
   border-radius: 14px;
   overflow: hidden;
@@ -175,12 +176,13 @@
 #wc-overlay-root .wc-name {
   display: block;
   flex: 1 1 auto;
+  min-width: 0;
   color: #ffffff;
   font-size: 15px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* wrap long nation names (e.g. "Bosnia and Herzegovina") instead of truncating with an ellipsis */
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 /* per-team follow ★ (dim outline -> gold when followed) */
@@ -363,24 +365,32 @@
   font-variant-numeric: tabular-nums;
 }
 #wc-overlay-root .wc-agrow.live .wc-agtime { color: #ff6b6b; }
+/* teams stack vertically (home over away) so each name gets the full row width to wrap into */
 #wc-overlay-root .wc-agteams {
   flex: 1 1 auto;
   display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
 }
-#wc-overlay-root .wc-agteams .wc-flag { font-size: 12px; vertical-align: -1px; }
-/* all:initial strips inheritance, so these inner spans must restate color/size/nowrap themselves —
-   otherwise the names render black, 16px and wrapping (was a dark-theme-only bug). */
+#wc-overlay-root .wc-agteam {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+#wc-overlay-root .wc-agteam.win .wc-agname,
+#wc-overlay-root .wc-agteam.win .wc-agscore { font-weight: 800; }
+#wc-overlay-root .wc-agteams .wc-flag { flex: 0 0 auto; font-size: 12px; vertical-align: -1px; }
+/* all:initial strips inheritance, so this inner span must restate its own color/size; it wraps long
+   names (the agenda was a dark-theme-only black-text bug before, now full names over two lines). */
 #wc-overlay-root .wc-agname {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow-wrap: break-word;
   min-width: 0;
   color: #ffffff;
   font-size: 12px;
@@ -388,12 +398,13 @@
 }
 #wc-overlay-root .wc-agscore {
   flex: 0 0 auto;
+  min-width: 14px;
   color: #ffffff;
   font-size: 12px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  padding: 0 2px;
+  text-align: right;
 }
 
 /* ---- group standings table ---- */
@@ -423,11 +434,11 @@
 }
 #wc-overlay-root .wc-tteam {
   flex: 1 1 auto;
+  min-width: 0;
   color: #ffffff;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 #wc-overlay-root .wc-tteam .wc-flag { font-size: 13px; margin-right: 5px; vertical-align: -1px; }
 #wc-overlay-root .wc-tnum {
@@ -472,9 +483,8 @@
 }
 #wc-overlay-root .wc-pitch-tm {
   color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: break-word;
   min-width: 0;
 }
 #wc-overlay-root .wc-pitch-tm .wc-flag { font-size: 13px; vertical-align: -1px; }
@@ -631,6 +641,49 @@
   50% { transform: scale(1.3); color: #d99e00; }
   100% { transform: scale(1); color: #16271d; }
 }
+/* ---- drag-to-resize grip (overlay only; the popup is a fixed window) ----
+   Sits at the corner OPPOSITE the widget's anchor (the "free" corner that moves as it grows).
+   Hidden + click-through until the card is hovered, so it never blocks content underneath. */
+#wc-overlay-root .wc-resize {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none; /* let pointermove drive the resize instead of scrolling */
+  transition: opacity 0.15s ease;
+}
+#wc-overlay-root .wc-card:hover .wc-resize { opacity: 0.55; pointer-events: auto; }
+#wc-overlay-root .wc-resize:hover { opacity: 1; }
+#wc-overlay-root.wc-pos-tl .wc-resize { right: 0; bottom: 0; cursor: nwse-resize; }
+#wc-overlay-root.wc-pos-br .wc-resize { left: 0; top: 0; cursor: nwse-resize; }
+#wc-overlay-root.wc-pos-tr .wc-resize { left: 0; bottom: 0; cursor: nesw-resize; }
+#wc-overlay-root.wc-pos-bl .wc-resize { right: 0; top: 0; cursor: nesw-resize; }
+/* two short diagonal grip lines angled into the corner */
+#wc-overlay-root.wc-pos-tl .wc-resize,
+#wc-overlay-root.wc-pos-br .wc-resize {
+  background: linear-gradient(135deg, transparent 0 44%, rgba(255, 255, 255, 0.85) 44% 52%, transparent 52% 64%, rgba(255, 255, 255, 0.85) 64% 72%, transparent 72%);
+}
+#wc-overlay-root.wc-pos-tr .wc-resize,
+#wc-overlay-root.wc-pos-bl .wc-resize {
+  background: linear-gradient(45deg, transparent 0 44%, rgba(255, 255, 255, 0.85) 44% 52%, transparent 52% 64%, rgba(255, 255, 255, 0.85) 64% 72%, transparent 72%);
+}
+/* light theme: the white grip lines vanish on the pale card, so draw them in green */
+#wc-overlay-root.wc-theme-light.wc-pos-tl .wc-resize,
+#wc-overlay-root.wc-theme-light.wc-pos-br .wc-resize {
+  background: linear-gradient(135deg, transparent 0 44%, rgba(10, 110, 54, 0.7) 44% 52%, transparent 52% 64%, rgba(10, 110, 54, 0.7) 64% 72%, transparent 72%);
+}
+#wc-overlay-root.wc-theme-light.wc-pos-tr .wc-resize,
+#wc-overlay-root.wc-theme-light.wc-pos-bl .wc-resize {
+  background: linear-gradient(45deg, transparent 0 44%, rgba(10, 110, 54, 0.7) 44% 52%, transparent 52% 64%, rgba(10, 110, 54, 0.7) 64% 72%, transparent 72%);
+}
+
+/* For a bottom-anchored widget the grip lands at a TOP corner, grazing the header buttons. Lift the
+   buttons above the grip so a press on the ~5px overlap resolves to the button (its click fires and
+   onPointerDown sees the button as the target, not .wc-resize) — the grip still works elsewhere. */
+#wc-overlay-root .wc-head .wc-icon { position: relative; z-index: 7; }
+
 /* ---- accessibility ---- */
 /* visible keyboard focus ring (all:initial strips the default outline) */
 #wc-overlay-root button:focus-visible,

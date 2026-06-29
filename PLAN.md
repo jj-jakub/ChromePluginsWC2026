@@ -59,10 +59,16 @@ Legend: `[x]` shipped · `[~]` in progress · `[ ]` planned.
 ---
 
 **The 1.0 roadmap above is complete** — all 21 features shipped across 7 batches, each with pure
-unit-tested logic and an adversarial multi-agent review (findings verified + fixed). 156 tests pass.
+unit-tested logic and an adversarial multi-agent review (findings verified + fixed). 165 tests pass.
 Next work is the deferred / fast-follow list below.
 
 ## Post-1.0 — shipped
+- [x] **Drag-to-resize + full-name visibility** — a hover-revealed corner grip (opposite the anchor)
+      zooms the whole widget via CSS `zoom`; pure `position.js` `resizeVector`/`scaleFromDrag`, new
+      clamped `settings.scale` (0.8–2.0). Separately, long nation names now **wrap** (no ellipsis) in
+      the card / standings / pitch, and the agenda **stacks** the two teams (home over away) so each
+      name gets the full row width. Adversarial review: 3 findings (all low/nit — grip↔minimize-button
+      overlap on the bl anchor, fixed by lifting the buttons' z-index; test gaps backfilled).
 - [x] **Schematic pitch view (⛶)** — pure `pitch.js` (`formationFor`/`parseFormation`/`layout`/
       `passPath`/`ballAt`; viewBox 100×64, formation-derived positions) + `pitch-anim.js` (the only
       non-pure content helper: rAF ball-along-pass-path + idle player bob, reduced-motion static,

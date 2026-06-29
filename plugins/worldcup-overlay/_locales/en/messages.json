@@ -16,6 +16,7 @@
   "titleFavoritesOnly": { "message": "Show favorites only" },
   "titleShowAll": { "message": "Show all matches" },
   "titleExpand": { "message": "FIFA World Cup — click to expand" },
+  "titleResize": { "message": "Drag to resize" },
   "titleAddToCalendar": { "message": "Add to calendar" },
   "labelCalendar": { "message": "Calendar" },
 
