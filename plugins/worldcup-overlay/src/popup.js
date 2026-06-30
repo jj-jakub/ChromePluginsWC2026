@@ -66,6 +66,7 @@
         deck: vd, cursor, fetchedAt, stale, refreshing, loadError, health, favorites, favFilter, canFilter,
         mode: pitchMode ? "pitch" : agendaMode ? "agenda" : tableMode ? "table" : "match",
         standings, canTable: tableMode || !!currentGroup(), icon: ICON,
+        navTop: true, // the popup grows downward from the toolbar, so its top edge is the fixed one
       },
       now
     );

@@ -122,6 +122,10 @@
 }
 
 #wc-overlay-root .wc-body { display: block; padding: 12px 13px 10px; }
+/* Keep the single-match card a stable height so the ‹ › arrows + counter don't jump as you rotate
+   through matches with differing content (form strip, calendar button, 1- vs 2-line names). Only the
+   match view; table/agenda/pitch size themselves. Content top-aligns; any slack sits above the nav. */
+#wc-overlay-root .wc-mode-match .wc-body { min-height: 248px; }
 
 /* status pill — dark translucent base so white text always reads; live is solid red */
 #wc-overlay-root .wc-status {
@@ -231,6 +235,15 @@
   flex-direction: column;
   gap: 3px;
   margin-top: 9px;
+}
+#wc-overlay-root .wc-formhead {
+  display: block;
+  margin-bottom: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 #wc-overlay-root .wc-formrow {
   display: flex;

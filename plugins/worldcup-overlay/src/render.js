@@ -35,22 +35,32 @@
       </div>`;
   }
 
-  // last-N W/D/L chips for one team, or "".
+  // last-N recent-result chips for one team, or "". Each carries a Win/Draw/Loss label so the
+  // single W/D/L letters aren't cryptic (title tooltip + aria-label).
+  const FORM_KEY = { w: "formWin", d: "formDraw", l: "formLoss" };
+  const FORM_FALLBACK = { w: "Win", d: "Draw", l: "Loss" };
   function formChips(form) {
     if (!form || !form.last || !form.last.length) return "";
     return form.last
-      .map((r) => `<span class="wc-chip wc-chip-${String(r).toLowerCase()}">${esc(r)}</span>`)
+      .map((r) => {
+        const k = String(r).toLowerCase();
+        const lbl = t(FORM_KEY[k] || "", FORM_FALLBACK[k] || String(r));
+        return `<span class="wc-chip wc-chip-${k}" title="${esc(lbl)}" aria-label="${esc(lbl)}">${esc(r)}</span>`;
+      })
       .join("");
   }
 
-  // A two-row recent-form strip (home then away), or "" when no form data is attached.
+  // A recent-form strip: a "Recent form" caption (so the W/D/L chips are self-explanatory) over the
+  // home then away rows. "" when no form data is attached.
   function formStrip(m) {
     const h = formChips(m.homeForm);
     const a = formChips(m.awayForm);
     if (!h && !a) return "";
     const hf = flagOf(m.home);
     const af = flagOf(m.away);
-    return `<div class="wc-form">
+    const tip = esc(t("titleRecentForm", "Recent form — W win · D draw · L loss"));
+    return `<div class="wc-form" title="${tip}">
+        <span class="wc-formhead">${esc(t("labelRecentForm", "Recent form"))}</span>
         <span class="wc-formrow">${hf ? `<span class="wc-flag">${hf}</span>` : ""}${h}</span>
         <span class="wc-formrow">${af ? `<span class="wc-flag">${af}</span>` : ""}${a}</span>
       </div>`;
@@ -293,7 +303,7 @@
       deck = [], fetchedAt, stale, refreshing, loadError, health,
       favorites = [], favFilter = false, canFilter = false,
       mode = "match", standings = null, canTable = false, flash = null, icon = "",
-      resizable = false,
+      resizable = false, navTop = false,
     } = model || {};
     let cursor = model && model.cursor != null ? model.cursor : 0;
     if (cursor < 0 || cursor >= deck.length) cursor = 0;
@@ -365,7 +375,7 @@
       : "";
 
     return `
-      <div class="wc-card${pulsing ? " wc-goal" : ""}">
+      <div class="wc-card wc-mode-${esc(mode)}${pulsing ? " wc-goal" : ""}">
         <div class="wc-head">
           <span class="wc-dot"><img src="${icon}" alt=""></span>
           <span class="wc-title">FIFA World Cup</span>
@@ -376,10 +386,11 @@
           <button type="button" class="wc-icon wc-refresh${refreshing ? " wc-spin" : ""}" title="${esc(t("titleRefresh", "Refresh now"))}" aria-label="${esc(t("titleRefresh", "Refresh now"))}">↻</button>
           <button type="button" class="wc-icon wc-min" title="${esc(t("titleMinimize", "Minimize"))}" aria-label="${esc(t("titleMinimize", "Minimize"))}">–</button>
         </div>
+        ${navTop ? nav : ""}
         ${goal}
         ${banner}
         <div class="wc-body">${body}</div>
-        ${nav}
+        ${navTop ? "" : nav}
         <div class="wc-foot-wrap">${yourNext}${foot}</div>
         ${grip}
       </div>`;

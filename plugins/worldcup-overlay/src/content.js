@@ -183,6 +183,9 @@
         mode: pitchMode ? "pitch" : agendaMode ? "agenda" : tableMode ? "table" : "match",
         standings, canTable: tableMode || !!currentGroup(), flash,
         icon: ICON, resizable: true,
+        // pin the rotate-nav to the widget's anchored (fixed) edge so the ‹ › arrows stay put as you
+        // page through matches of differing height: top corners -> under the header, bottom -> footer.
+        navTop: settings.corner.charAt(0) === "t",
       },
       now
     );

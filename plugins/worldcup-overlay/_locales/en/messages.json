@@ -33,6 +33,12 @@
   "followTeam": { "message": "Follow" },
   "unfollowTeam": { "message": "Unfollow" },
 
+  "labelRecentForm": { "message": "Recent form" },
+  "titleRecentForm": { "message": "Recent form — W win · D draw · L loss" },
+  "formWin": { "message": "Win" },
+  "formDraw": { "message": "Draw" },
+  "formLoss": { "message": "Loss" },
+
   "yourNext": { "message": "Your next:" },
   "footUpdated": { "message": "Updated" },
   "footOffline": { "message": "offline" },

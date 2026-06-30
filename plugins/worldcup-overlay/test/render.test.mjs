@@ -186,6 +186,26 @@ test("matchBody renders a recent-form strip when form data is attached", () => {
   assert.match(html, /wc-chip wc-chip-l/);
 });
 
+test("form strip captions the row and labels each W/D/L chip (Win/Draw/Loss)", () => {
+  const mm = {
+    id: "1", home: "Brazil", away: "Norway", matchMode: "result", kickoffMs: NOW - H,
+    homeForm: { last: ["W", "D"] }, awayForm: { last: ["L"] },
+  };
+  const html = matchBody(mm, NOW, []);
+  assert.match(html, /Recent form/);
+  assert.match(html, /title="Win"/);
+  assert.match(html, /title="Draw"/);
+  assert.match(html, /title="Loss"/);
+});
+
+test("navTop pins the rotate nav under the header (before the body), else at the bottom", () => {
+  const deck = [m({ id: "a", matchMode: "result", ko: NOW - H }), m({ id: "b", matchMode: "upcoming", ko: NOW + H })];
+  const top = card({ deck, cursor: 0, navTop: true, icon: "i" }, NOW);
+  assert.ok(top.indexOf("wc-nav") < top.indexOf("wc-body"), "navTop -> nav before body");
+  const bottom = card({ deck, cursor: 0, navTop: false, icon: "i" }, NOW);
+  assert.ok(bottom.indexOf("wc-nav") > bottom.indexOf("wc-body"), "default -> nav after body");
+});
+
 test("matchBody omits the form strip when there's no form data", () => {
   const html = matchBody(m({ matchMode: "upcoming", ko: NOW + H }), NOW, []);
   assert.doesNotMatch(html, /wc-form/);
@@ -254,7 +274,7 @@ test("card shows the table toggle only when canTable", () => {
 test("card pulses when the shown match has a fresh score change", () => {
   const deck = [m({ id: "x", matchMode: "live", hs: 2, as: 1 })];
   const html = card({ deck, cursor: 0, flash: { ids: ["x"] }, icon: "i" }, NOW);
-  assert.match(html, /wc-card wc-goal/);
+  assert.match(html, /wc-card[^"]*wc-goal/); // wc-goal is appended after the wc-mode-* class
   assert.match(html, /GOAL!/);
 });
 
